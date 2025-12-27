@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment variables
+.env
+backend/.env
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+
+# Storage
+storage/photos/*
+backend/storage/photos/*
+!storage/photos/.gitkeep
+!backend/storage/photos/.gitkeep
+
+# OS files
+.DS_Store
+backend/.DS_Store

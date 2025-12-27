@@ -81,7 +81,7 @@ export function getProduct(productId) {
 }
 
 /**
- * List products with optional filters
+ * List products with optional filters (includes images)
  */
 export function listProducts(filters = {}) {
     const db = getDatabase();
@@ -103,11 +103,38 @@ export function listProducts(filters = {}) {
 
     const products = db.prepare(query).all(...params);
 
+    if (products.length === 0) {
+        return [];
+    }
+
+    // Batch fetch all images for the returned products
+    const productIds = products.map(p => p.id);
+    const placeholders = productIds.map(() => '?').join(',');
+    const allImages = db.prepare(`
+        SELECT * FROM product_images 
+        WHERE product_id IN (${placeholders}) 
+        ORDER BY created_at
+    `).all(...productIds);
+
+    // Group images by product_id for efficient lookup
+    const imagesByProductId = {};
+    for (const img of allImages) {
+        if (!imagesByProductId[img.product_id]) {
+            imagesByProductId[img.product_id] = [];
+        }
+        imagesByProductId[img.product_id].push({
+            id: img.id,
+            url: `/api/photos/${img.id}`,
+            createdAt: img.created_at
+        });
+    }
+
     return products.map(p => ({
         ...p,
         metal: p.metal_json ? JSON.parse(p.metal_json) : null,
         gemstone: p.gemstone_json ? JSON.parse(p.gemstone_json) : null,
-        design: p.design_json ? JSON.parse(p.design_json) : null
+        design: p.design_json ? JSON.parse(p.design_json) : null,
+        images: imagesByProductId[p.id] || []
     }));
 }
 

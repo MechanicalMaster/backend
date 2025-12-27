@@ -133,14 +133,15 @@ Upload photo (multipart/form-data, field: `photo`).
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/products` | List (filters: `?type=product`, `?categoryId=uuid`) |
+| GET | `/api/products` | List with images (filters: `?type=product`, `?categoryId=uuid`) |
 | GET | `/api/products/:id` | Get with images |
 | POST | `/api/products` | Create |
-| PUT | `/api/products/:id` | Update |
+| PUT | `/api/products/:id` | Update (does NOT affect images) |
 | DELETE | `/api/products/:id` | Soft delete |
-| POST | `/api/products/:id/images` | Upload image |
+| POST | `/api/products/:id/images` | Upload image (multipart) |
 | DELETE | `/api/products/:productId/images/:imageId` | Delete image |
 
+### Product JSON Schema
 ```json
 {
   "type": "product",
@@ -152,6 +153,37 @@ Upload photo (multipart/form-data, field: `photo`).
   "gemstone": { "type": "Diamond", "carat": 0.5 }
 }
 ```
+
+### ⚠️ Image Handling (Important)
+
+**Images are managed separately from product data.** The `PUT /api/products/:id` endpoint does **NOT** accept or modify images. Existing images persist across product updates.
+
+#### Workflow
+1. **Create/Update product** → `POST` or `PUT /api/products/:id` (no images in body)
+2. **Add image** → `POST /api/products/:id/images` (multipart/form-data)
+3. **Remove image** → `DELETE /api/products/:productId/images/:imageId`
+
+#### Upload Request
+```http
+POST /api/products/:id/images
+Content-Type: multipart/form-data
+
+image: <binary file>   ← field name must be "image"
+```
+
+#### Response from GET `/api/products/:id`
+```json
+{
+  "id": "uuid",
+  "name": "Diamond Earring",
+  ...
+  "images": [
+    { "id": "image-uuid", "url": "/api/photos/image-uuid", "createdAt": "..." }
+  ]
+}
+```
+
+Images are linked via `product_id` foreign key and returned automatically when fetching a product.
 
 ---
 

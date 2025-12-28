@@ -7,8 +7,14 @@ import {
     deleteVendor
 } from '../services/vendorService.js';
 import { validate, schemas } from '../middleware/validator.js';
+import { authenticateToken, adminOnly } from '../middleware/auth.js';
+import { injectShopScope } from '../middleware/shopScope.js';
 
 const router = express.Router();
+
+// All routes require authentication and shop scope
+router.use(authenticateToken);
+router.use(injectShopScope);
 
 /**
  * @swagger
@@ -19,16 +25,10 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: List of vendors
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Vendor'
  */
 router.get('/', (req, res, next) => {
     try {
-        const vendors = listVendors();
+        const vendors = listVendors(req.shopId);
         res.json(vendors);
     } catch (error) {
         next(error);
@@ -41,26 +41,10 @@ router.get('/', (req, res, next) => {
  *   get:
  *     summary: Get single vendor
  *     tags: [Vendors]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       200:
- *         description: Vendor details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Vendor'
- *       404:
- *         description: Vendor not found
  */
 router.get('/:id', (req, res, next) => {
     try {
-        const vendor = getVendor(req.params.id);
+        const vendor = getVendor(req.shopId, req.params.id);
         if (!vendor) {
             return res.status(404).json({ error: 'Vendor not found', requestId: req.requestId });
         }
@@ -76,23 +60,10 @@ router.get('/:id', (req, res, next) => {
  *   post:
  *     summary: Create new vendor
  *     tags: [Vendors]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Vendor'
- *     responses:
- *       201:
- *         description: Vendor created
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Vendor'
  */
 router.post('/', validate(schemas.vendor), (req, res, next) => {
     try {
-        const vendor = createVendor(req.body);
+        const vendor = createVendor(req.shopId, req.body);
         res.status(201).json(vendor);
     } catch (error) {
         next(error);
@@ -105,30 +76,10 @@ router.post('/', validate(schemas.vendor), (req, res, next) => {
  *   put:
  *     summary: Update vendor
  *     tags: [Vendors]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Vendor'
- *     responses:
- *       200:
- *         description: Vendor updated
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Vendor'
  */
 router.put('/:id', validate(schemas.vendor), (req, res, next) => {
     try {
-        const vendor = updateVendor(req.params.id, req.body);
+        const vendor = updateVendor(req.shopId, req.params.id, req.body);
         res.json(vendor);
     } catch (error) {
         next(error);
@@ -139,22 +90,12 @@ router.put('/:id', validate(schemas.vendor), (req, res, next) => {
  * @swagger
  * /api/vendors/{id}:
  *   delete:
- *     summary: Soft delete vendor
+ *     summary: Soft delete vendor (ADMIN only)
  *     tags: [Vendors]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       204:
- *         description: Vendor deleted
  */
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deleteVendor(req.params.id);
+        deleteVendor(req.shopId, req.params.id);
         res.status(204).send();
     } catch (error) {
         next(error);

@@ -1,6 +1,7 @@
 import express from 'express';
-import { requestOTP, verifyOTP, getUser } from '../services/userService.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { requestOTP, verifyOTP, getUser, createUser, listUsers } from '../services/userService.js';
+import { authenticateToken, adminOnly } from '../middleware/auth.js';
+import { injectShopScope } from '../middleware/shopScope.js';
 
 const router = express.Router();
 
@@ -186,6 +187,75 @@ router.get('/me', authenticateToken, (req, res, next) => {
             });
         }
         res.json(user);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/users:
+ *   get:
+ *     summary: List all users in the shop (ADMIN only)
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: List of users
+ */
+router.get('/users', authenticateToken, injectShopScope, adminOnly, (req, res, next) => {
+    try {
+        const users = listUsers(req.shopId);
+        res.json(users);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/users:
+ *   post:
+ *     summary: Create a new user in the shop (ADMIN only)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [phone]
+ *             properties:
+ *               phone:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [ADMIN, SALES]
+ *     responses:
+ *       201:
+ *         description: User created
+ */
+router.post('/users', authenticateToken, injectShopScope, adminOnly, (req, res, next) => {
+    try {
+        const { phone, name, role } = req.body;
+
+        if (!phone) {
+            return res.status(400).json({
+                error: 'Phone number is required',
+                requestId: req.requestId
+            });
+        }
+
+        if (role && !['ADMIN', 'SALES'].includes(role)) {
+            return res.status(400).json({
+                error: 'Role must be ADMIN or SALES',
+                requestId: req.requestId
+            });
+        }
+
+        const user = createUser(req.shopId, { phone, name, role });
+        res.status(201).json(user);
     } catch (error) {
         next(error);
     }

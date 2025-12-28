@@ -7,8 +7,14 @@ import {
     deleteCustomer
 } from '../services/customerService.js';
 import { validate, schemas } from '../middleware/validator.js';
+import { authenticateToken, adminOnly } from '../middleware/auth.js';
+import { injectShopScope } from '../middleware/shopScope.js';
 
 const router = express.Router();
+
+// All routes require authentication and shop scope
+router.use(authenticateToken);
+router.use(injectShopScope);
 
 /**
  * @swagger
@@ -28,7 +34,7 @@ const router = express.Router();
  */
 router.get('/', (req, res, next) => {
     try {
-        const customers = listCustomers();
+        const customers = listCustomers(req.shopId);
         res.json(customers);
     } catch (error) {
         next(error);
@@ -60,7 +66,7 @@ router.get('/', (req, res, next) => {
  */
 router.get('/:id', (req, res, next) => {
     try {
-        const customer = getCustomer(req.params.id);
+        const customer = getCustomer(req.shopId, req.params.id);
 
         if (!customer) {
             return res.status(404).json({
@@ -97,7 +103,7 @@ router.get('/:id', (req, res, next) => {
  */
 router.post('/', validate(schemas.customer), (req, res, next) => {
     try {
-        const customer = createCustomer(req.body);
+        const customer = createCustomer(req.shopId, req.body);
         res.status(201).json(customer);
     } catch (error) {
         next(error);
@@ -133,7 +139,7 @@ router.post('/', validate(schemas.customer), (req, res, next) => {
  */
 router.put('/:id', validate(schemas.customer), (req, res, next) => {
     try {
-        const customer = updateCustomer(req.params.id, req.body);
+        const customer = updateCustomer(req.shopId, req.params.id, req.body);
         res.json(customer);
     } catch (error) {
         next(error);
@@ -144,7 +150,7 @@ router.put('/:id', validate(schemas.customer), (req, res, next) => {
  * @swagger
  * /api/customers/{id}:
  *   delete:
- *     summary: Soft delete customer
+ *     summary: Soft delete customer (ADMIN only)
  *     tags: [Customers]
  *     parameters:
  *       - in: path
@@ -157,9 +163,9 @@ router.put('/:id', validate(schemas.customer), (req, res, next) => {
  *       204:
  *         description: Customer deleted
  */
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deleteCustomer(req.params.id);
+        deleteCustomer(req.shopId, req.params.id);
         res.status(204).send();
     } catch (error) {
         next(error);

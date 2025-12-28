@@ -9,6 +9,7 @@ export const config = {
   databasePath: process.env.DATABASE_PATH || './swipe.db',
   storagePath: process.env.STORAGE_PATH || './storage/photos',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+  setupSecret: process.env.SETUP_SECRET || 'dev-setup-secret',
   migrationEnabled: process.env.MIGRATION_ENABLED === 'true',
 };
 

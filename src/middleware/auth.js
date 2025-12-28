@@ -3,7 +3,7 @@ import { config } from '../config/index.js';
 
 /**
  * JWT authentication middleware
- * Verifies JWT token and attaches user to request
+ * Verifies JWT token and attaches user (with shopId and role) to request
  */
 export function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -18,6 +18,7 @@ export function authenticateToken(req, res, next) {
 
     try {
         const decoded = jwt.verify(token, config.jwtSecret);
+        // JWT payload: { userId, shopId, role }
         req.user = decoded;
         next();
     } catch (error) {
@@ -50,4 +51,40 @@ export function requireRole(...roles) {
 
         next();
     };
+}
+
+/**
+ * Admin-only middleware
+ * Blocks access for non-ADMIN users
+ */
+export function adminOnly(req, res, next) {
+    if (!req.user) {
+        return res.status(401).json({
+            error: 'Authentication required',
+            requestId: req.requestId
+        });
+    }
+
+    if (req.user.role !== 'ADMIN') {
+        return res.status(403).json({
+            error: 'Admin access required',
+            requestId: req.requestId
+        });
+    }
+
+    next();
+}
+
+/**
+ * Block DELETE operations for SALES role
+ * Use on routes where SALES users should only have read/create/update access
+ */
+export function noDeleteForSales(req, res, next) {
+    if (req.method === 'DELETE' && req.user && req.user.role === 'SALES') {
+        return res.status(403).json({
+            error: 'Delete operation not permitted for sales users',
+            requestId: req.requestId
+        });
+    }
+    next();
 }

@@ -1,25 +1,30 @@
+// SECURITY: All queries in this service MUST be scoped by shopId
+
 import { getDatabase, transaction } from '../db/init.js';
 import { generateUUID } from '../utils/uuid.js';
 import { logAction } from './auditService.js';
 
 /**
  * Create a new product
+ * @param {string} shopId - Shop UUID
+ * @param {Object} data - Product data
  */
-export function createProduct(data) {
+export function createProduct(shopId, data) {
     return transaction((db) => {
         const productId = generateUUID();
         const now = new Date().toISOString();
 
         db.prepare(`
       INSERT INTO products (
-        id, type, name, sku, barcode, hsn, category_id, subcategory_id,
+        id, shop_id, type, name, sku, barcode, hsn, category_id, subcategory_id,
         description, selling_price, purchase_price, tax_rate, unit,
         metal_json, gemstone_json, design_json, vendor_ref, procurement_date,
         hallmark_cert, launch_date, show_online, not_for_sale,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
             productId,
+            shopId,
             data.type,
             data.name,
             data.sku || null,
@@ -45,21 +50,23 @@ export function createProduct(data) {
             now
         );
 
-        logAction('product', productId, 'CREATE', { name: data.name });
+        logAction(shopId, 'product', productId, 'CREATE', { name: data.name });
 
-        return getProduct(productId);
+        return getProduct(shopId, productId);
     });
 }
 
 /**
  * Get a product with images
+ * @param {string} shopId - Shop UUID
+ * @param {string} productId - Product UUID
  */
-export function getProduct(productId) {
+export function getProduct(shopId, productId) {
     const db = getDatabase();
 
     const product = db.prepare(`
-    SELECT * FROM products WHERE id = ? AND deleted_at IS NULL
-  `).get(productId);
+    SELECT * FROM products WHERE id = ? AND shop_id = ? AND deleted_at IS NULL
+  `).get(productId, shopId);
 
     if (!product) return null;
 
@@ -82,12 +89,14 @@ export function getProduct(productId) {
 
 /**
  * List products with optional filters (includes images)
+ * @param {string} shopId - Shop UUID
+ * @param {Object} filters - Optional filters
  */
-export function listProducts(filters = {}) {
+export function listProducts(shopId, filters = {}) {
     const db = getDatabase();
 
-    let query = 'SELECT * FROM products WHERE deleted_at IS NULL';
-    const params = [];
+    let query = 'SELECT * FROM products WHERE shop_id = ? AND deleted_at IS NULL';
+    const params = [shopId];
 
     if (filters.type) {
         query += ' AND type = ?';
@@ -140,8 +149,11 @@ export function listProducts(filters = {}) {
 
 /**
  * Update a product
+ * @param {string} shopId - Shop UUID
+ * @param {string} productId - Product UUID
+ * @param {Object} data - Update data
  */
-export function updateProduct(productId, data) {
+export function updateProduct(shopId, productId, data) {
     const db = getDatabase();
     const now = new Date().toISOString();
 
@@ -152,7 +164,7 @@ export function updateProduct(productId, data) {
         tax_rate = ?, unit = ?, metal_json = ?, gemstone_json = ?, design_json = ?,
         vendor_ref = ?, procurement_date = ?, hallmark_cert = ?, launch_date = ?,
         show_online = ?, not_for_sale = ?, updated_at = ?
-    WHERE id = ? AND deleted_at IS NULL
+    WHERE id = ? AND shop_id = ? AND deleted_at IS NULL
   `).run(
         data.type,
         data.name,
@@ -176,40 +188,54 @@ export function updateProduct(productId, data) {
         data.showOnline ? 1 : 0,
         data.notForSale ? 1 : 0,
         now,
-        productId
+        productId,
+        shopId
     );
 
     if (result.changes === 0) {
         throw new Error('Product not found');
     }
 
-    logAction('product', productId, 'UPDATE');
+    logAction(shopId, 'product', productId, 'UPDATE');
 
-    return getProduct(productId);
+    return getProduct(shopId, productId);
 }
 
 /**
  * Soft delete a product
+ * @param {string} shopId - Shop UUID
+ * @param {string} productId - Product UUID
  */
-export function deleteProduct(productId) {
+export function deleteProduct(shopId, productId) {
     const db = getDatabase();
 
     const result = db.prepare(`
-    UPDATE products SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL
-  `).run(new Date().toISOString(), productId);
+    UPDATE products SET deleted_at = ? WHERE id = ? AND shop_id = ? AND deleted_at IS NULL
+  `).run(new Date().toISOString(), productId, shopId);
 
     if (result.changes === 0) {
         throw new Error('Product not found or already deleted');
     }
 
-    logAction('product', productId, 'DELETE');
+    logAction(shopId, 'product', productId, 'DELETE');
 }
 
 /**
  * Add image to product
+ * @param {string} shopId - Shop UUID (for validation)
+ * @param {string} productId - Product UUID
+ * @param {string} filePath - File path
+ * @param {string} checksum - File checksum
  */
-export function addProductImage(productId, filePath, checksum) {
+export function addProductImage(shopId, productId, filePath, checksum) {
     const db = getDatabase();
+
+    // Verify product belongs to shop
+    const product = db.prepare('SELECT id FROM products WHERE id = ? AND shop_id = ?').get(productId, shopId);
+    if (!product) {
+        throw new Error('Product not found');
+    }
+
     const imageId = generateUUID();
     const now = new Date().toISOString();
 
@@ -223,11 +249,18 @@ export function addProductImage(productId, filePath, checksum) {
 
 /**
  * Delete product image
+ * @param {string} shopId - Shop UUID (for validation)
+ * @param {string} imageId - Image UUID
  */
-export function deleteProductImage(imageId) {
+export function deleteProductImage(shopId, imageId) {
     const db = getDatabase();
 
-    const image = db.prepare('SELECT file_path FROM product_images WHERE id = ?').get(imageId);
+    // Verify image belongs to a product in this shop
+    const image = db.prepare(`
+        SELECT pi.file_path FROM product_images pi
+        JOIN products p ON pi.product_id = p.id
+        WHERE pi.id = ? AND p.shop_id = ?
+    `).get(imageId, shopId);
 
     if (!image) {
         throw new Error('Image not found');

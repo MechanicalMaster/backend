@@ -8,8 +8,14 @@ import {
     createSubcategory,
     deleteSubcategory
 } from '../services/categoryService.js';
+import { authenticateToken, adminOnly } from '../middleware/auth.js';
+import { injectShopScope } from '../middleware/shopScope.js';
 
 const router = express.Router();
+
+// All routes require authentication and shop scope
+router.use(authenticateToken);
+router.use(injectShopScope);
 
 /**
  * @swagger
@@ -17,19 +23,10 @@ const router = express.Router();
  *   get:
  *     summary: List all categories with subcategories
  *     tags: [Categories]
- *     responses:
- *       200:
- *         description: List of categories
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Category'
  */
 router.get('/', (req, res, next) => {
     try {
-        const categories = listCategories();
+        const categories = listCategories(req.shopId);
         res.json(categories);
     } catch (error) {
         next(error);
@@ -42,26 +39,10 @@ router.get('/', (req, res, next) => {
  *   get:
  *     summary: Get single category
  *     tags: [Categories]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       200:
- *         description: Category details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Category'
- *       404:
- *         description: Category not found
  */
 router.get('/:id', (req, res, next) => {
     try {
-        const category = getCategory(req.params.id);
+        const category = getCategory(req.shopId, req.params.id);
         if (!category) {
             return res.status(404).json({ error: 'Category not found', requestId: req.requestId });
         }
@@ -77,23 +58,10 @@ router.get('/:id', (req, res, next) => {
  *   post:
  *     summary: Create new category
  *     tags: [Categories]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Category'
- *     responses:
- *       201:
- *         description: Category created
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Category'
  */
 router.post('/', (req, res, next) => {
     try {
-        const category = createCategory(req.body);
+        const category = createCategory(req.shopId, req.body);
         res.status(201).json(category);
     } catch (error) {
         next(error);
@@ -106,30 +74,10 @@ router.post('/', (req, res, next) => {
  *   put:
  *     summary: Update category
  *     tags: [Categories]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Category'
- *     responses:
- *       200:
- *         description: Category updated
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Category'
  */
 router.put('/:id', (req, res, next) => {
     try {
-        const category = updateCategory(req.params.id, req.body);
+        const category = updateCategory(req.shopId, req.params.id, req.body);
         res.json(category);
     } catch (error) {
         next(error);
@@ -140,22 +88,12 @@ router.put('/:id', (req, res, next) => {
  * @swagger
  * /api/categories/{id}:
  *   delete:
- *     summary: Soft delete category
+ *     summary: Delete category (ADMIN only)
  *     tags: [Categories]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       204:
- *         description: Category deleted
  */
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deleteCategory(req.params.id);
+        deleteCategory(req.shopId, req.params.id);
         res.status(204).send();
     } catch (error) {
         next(error);
@@ -168,31 +106,10 @@ router.delete('/:id', (req, res, next) => {
  *   post:
  *     summary: Add subcategory to category
  *     tags: [Categories]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Category ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 description: Subcategory name
- *     responses:
- *       201:
- *         description: Subcategory created
  */
 router.post('/:id/subcategories', (req, res, next) => {
     try {
-        const subcategory = createSubcategory(req.params.id, req.body);
+        const subcategory = createSubcategory(req.shopId, req.params.id, req.body);
         res.status(201).json(subcategory);
     } catch (error) {
         next(error);
@@ -203,28 +120,12 @@ router.post('/:id/subcategories', (req, res, next) => {
  * @swagger
  * /api/categories/{categoryId}/subcategories/{subcategoryId}:
  *   delete:
- *     summary: Delete subcategory
+ *     summary: Delete subcategory (ADMIN only)
  *     tags: [Categories]
- *     parameters:
- *       - in: path
- *         name: categoryId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *       - in: path
- *         name: subcategoryId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       204:
- *         description: Subcategory deleted
  */
-router.delete('/:categoryId/subcategories/:subcategoryId', (req, res, next) => {
+router.delete('/:categoryId/subcategories/:subcategoryId', adminOnly, (req, res, next) => {
     try {
-        deleteSubcategory(req.params.subcategoryId);
+        deleteSubcategory(req.shopId, req.params.subcategoryId);
         res.status(204).send();
     } catch (error) {
         next(error);

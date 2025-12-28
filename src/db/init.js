@@ -42,31 +42,10 @@ export function initDatabase() {
 
     dbLogger.info('Database schema initialized');
 
-    // Initialize default sequences
-    initializeSequences();
+    // Note: Sequences are now per-shop and initialized when a shop is created
+    // See shopService.js initializeShopSequences()
 
     return db;
-}
-
-/**
- * Initialize default sequence values
- */
-function initializeSequences() {
-    const sequences = [
-        { key: 'invoice_seq', value: 1 },
-        { key: 'purchase_seq', value: 1 },
-        { key: 'payment_seq', value: 1 }
-    ];
-
-    const insertStmt = db.prepare(`
-    INSERT OR IGNORE INTO sequences (key, value) VALUES (?, ?)
-  `);
-
-    sequences.forEach(seq => {
-        insertStmt.run(seq.key, seq.value);
-    });
-
-    dbLogger.info('Initialized default sequences');
 }
 
 /**

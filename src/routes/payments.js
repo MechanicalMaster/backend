@@ -6,8 +6,14 @@ import {
     deletePayment
 } from '../services/paymentService.js';
 import { validate, schemas } from '../middleware/validator.js';
+import { authenticateToken, adminOnly } from '../middleware/auth.js';
+import { injectShopScope } from '../middleware/shopScope.js';
 
 const router = express.Router();
+
+// All routes require authentication and shop scope
+router.use(authenticateToken);
+router.use(injectShopScope);
 
 /**
  * @swagger
@@ -15,26 +21,6 @@ const router = express.Router();
  *   get:
  *     summary: List payments with optional filters
  *     tags: [Payments]
- *     parameters:
- *       - in: query
- *         name: partyId
- *         schema:
- *           type: string
- *           format: uuid
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [IN, OUT]
- *     responses:
- *       200:
- *         description: List of payments
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Payment'
  */
 router.get('/', (req, res, next) => {
     try {
@@ -43,7 +29,7 @@ router.get('/', (req, res, next) => {
             type: req.query.type
         };
 
-        const payments = listPayments(filters);
+        const payments = listPayments(req.shopId, filters);
         res.json(payments);
     } catch (error) {
         next(error);
@@ -56,26 +42,10 @@ router.get('/', (req, res, next) => {
  *   get:
  *     summary: Get payment with allocations
  *     tags: [Payments]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       200:
- *         description: Payment details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Payment'
- *       404:
- *         description: Payment not found
  */
 router.get('/:id', (req, res, next) => {
     try {
-        const payment = getPayment(req.params.id);
+        const payment = getPayment(req.shopId, req.params.id);
 
         if (!payment) {
             return res.status(404).json({
@@ -96,23 +66,10 @@ router.get('/:id', (req, res, next) => {
  *   post:
  *     summary: Create payment with allocations
  *     tags: [Payments]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Payment'
- *     responses:
- *       201:
- *         description: Payment created
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Payment'
  */
 router.post('/', validate(schemas.payment), (req, res, next) => {
     try {
-        const payment = createPayment(req.body);
+        const payment = createPayment(req.shopId, req.body);
         res.status(201).json(payment);
     } catch (error) {
         next(error);
@@ -123,22 +80,12 @@ router.post('/', validate(schemas.payment), (req, res, next) => {
  * @swagger
  * /api/payments/{id}:
  *   delete:
- *     summary: Delete payment and recalculate balances
+ *     summary: Delete payment and recalculate balances (ADMIN only)
  *     tags: [Payments]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       204:
- *         description: Payment deleted
  */
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deletePayment(req.params.id);
+        deletePayment(req.shopId, req.params.id);
         res.status(204).send();
     } catch (error) {
         next(error);

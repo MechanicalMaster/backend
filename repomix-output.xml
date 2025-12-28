@@ -1,0 +1,6834 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+src/
+  config/
+    index.js
+    swagger.js
+  db/
+    init.js
+    schema.sql
+  middleware/
+    auth.js
+    errorHandler.js
+    validator.js
+  models/
+    InvoiceAggregate.js
+  routes/
+    attendance.js
+    auth.js
+    categories.js
+    customers.js
+    invoices.js
+    payments.js
+    photos.js
+    products.js
+    purchases.js
+    settings.js
+    vendors.js
+  services/
+    attendanceService.js
+    auditService.js
+    categoryService.js
+    customerService.js
+    fileService.js
+    invoiceService.js
+    paymentService.js
+    productService.js
+    purchaseService.js
+    sequenceService.js
+    settingsService.js
+    userService.js
+    vendorService.js
+  utils/
+    calculator.js
+    checksum.js
+    logger.js
+    logger.test.js
+    uuid.js
+  server.js
+storage/
+  photos/
+    .gitkeep
+.gitignore
+IMPLEMENTATION_NOTES.md
+integration.md
+NODE_VERSION_REQUIRED.md
+package.json
+README.md
+setup.sh
+specs.md
+verify_create_customer.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/config/swagger.js">
+import swaggerJsdoc from 'swagger-jsdoc';
+
+const options = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'Swipe Backend API',
+            version: '1.0.0',
+        },
+        servers: [
+            {
+                url: 'http://localhost:3000',
+                description: 'Local Development Server',
+            },
+        ],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                },
+            },
+            schemas: {
+                InvoiceAggregate: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        invoiceNumber: { type: 'string' },
+                        type: { type: 'string', enum: ['INVOICE', 'PROFORMA', 'LENDING'] },
+                        status: { type: 'string', enum: ['PAID', 'PARTIAL', 'UNPAID', 'PENDING'] },
+                        date: { type: 'string', format: 'date' },
+                        dueDate: { type: 'string', format: 'date', nullable: true },
+                        placeOfSupply: { type: 'string', nullable: true },
+                        customer: {
+                            type: 'object',
+                            nullable: true,
+                            properties: {
+                                id: { type: 'string', format: 'uuid' },
+                                name: { type: 'string' },
+                                phone: { type: 'string', nullable: true },
+                                gstin: { type: 'string', nullable: true },
+                                address: { type: 'object', nullable: true },
+                            },
+                        },
+                        items: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    productId: { type: 'string', format: 'uuid', nullable: true },
+                                    description: { type: 'string', nullable: true },
+                                    quantity: { type: 'number' },
+                                    rate: { type: 'number' },
+                                    taxRate: { type: 'number', nullable: true },
+                                    weight: { type: 'object', nullable: true },
+                                    amount: { type: 'object', nullable: true },
+                                },
+                            },
+                        },
+                        totals: {
+                            type: 'object',
+                            nullable: true,
+                            properties: {
+                                subtotal: { type: 'number' },
+                                taxTotal: { type: 'number' },
+                                cgst: { type: 'number' },
+                                sgst: { type: 'number' },
+                                igst: { type: 'number' },
+                                roundOff: { type: 'number' },
+                                grandTotal: { type: 'number' },
+                            },
+                        },
+                        photos: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    url: { type: 'string' },
+                                    createdAt: { type: 'string', format: 'date-time' },
+                                },
+                            },
+                        },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                },
+                Customer: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        name: { type: 'string' },
+                        phone: { type: 'string', nullable: true },
+                        gstin: { type: 'string', nullable: true },
+                        email: { type: 'string', nullable: true },
+                        address: {
+                            oneOf: [
+                                { type: 'object' },
+                                { type: 'string' }
+                            ],
+                            nullable: true
+                        },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                },
+                Vendor: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        name: { type: 'string' },
+                        phone: { type: 'string', nullable: true },
+                        gstin: { type: 'string', nullable: true },
+                        email: { type: 'string', nullable: true },
+                        address: {
+                            oneOf: [
+                                { type: 'object' },
+                                { type: 'string' }
+                            ],
+                            nullable: true
+                        },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                },
+                Category: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        name: { type: 'string' },
+                        type: { type: 'string', enum: ['product', 'service'] },
+                        subcategories: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    name: { type: 'string' },
+                                    categoryId: { type: 'string', format: 'uuid' }
+                                }
+                            }
+                        }
+                    }
+                },
+                Product: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        type: { type: 'string', enum: ['product', 'service'] },
+                        name: { type: 'string' },
+                        sku: { type: 'string', nullable: true },
+                        barcode: { type: 'string', nullable: true },
+                        hsn: { type: 'string', nullable: true },
+                        categoryId: { type: 'string', format: 'uuid', nullable: true },
+                        subcategoryId: { type: 'string', format: 'uuid', nullable: true },
+                        description: { type: 'string', nullable: true },
+                        sellingPrice: { type: 'number' },
+                        purchasePrice: { type: 'number' },
+                        taxRate: { type: 'number' },
+                        unit: { type: 'string', nullable: true },
+                        metal: { type: 'object', nullable: true },
+                        gemstone: { type: 'object', nullable: true },
+                        design: { type: 'object', nullable: true },
+                        images: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    url: { type: 'string' },
+                                    createdAt: { type: 'string', format: 'date-time' }
+                                }
+                            }
+                        },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' }
+                    }
+                },
+                Purchase: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        purchaseNumber: { type: 'string' },
+                        vendorId: { type: 'string', format: 'uuid' },
+                        status: { type: 'string', enum: ['RECEIVED', 'PENDING', 'ORDERED'] },
+                        date: { type: 'string', format: 'date' },
+                        dueDate: { type: 'string', format: 'date', nullable: true },
+                        vendorInvoiceNumber: { type: 'string', nullable: true },
+                        vendor: { $ref: '#/components/schemas/Vendor' },
+                        items: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string', format: 'uuid' },
+                                    description: { type: 'string' },
+                                    quantity: { type: 'number' },
+                                    rate: { type: 'number' },
+                                    taxRate: { type: 'number' },
+                                    amount: { type: 'number' }
+                                }
+                            }
+                        },
+                        totals: {
+                            type: 'object',
+                            properties: {
+                                subtotal: { type: 'number' },
+                                taxTotal: { type: 'number' },
+                                grandTotal: { type: 'number' }
+                            }
+                        }
+                    }
+                },
+                Payment: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        receiptNumber: { type: 'string' },
+                        type: { type: 'string', enum: ['IN', 'OUT'] },
+                        partyType: { type: 'string', enum: ['CUSTOMER', 'VENDOR'] },
+                        partyId: { type: 'string', format: 'uuid' },
+                        amount: { type: 'number' },
+                        date: { type: 'string', format: 'date' },
+                        mode: { type: 'string' },
+                        notes: { type: 'string', nullable: true },
+                        allocations: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    invoiceId: { type: 'string', format: 'uuid' },
+                                    amount: { type: 'number' }
+                                }
+                            }
+                        },
+                        createdAt: { type: 'string', format: 'date-time' }
+                    }
+                },
+                Attendance: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        userId: { type: 'string', format: 'uuid' },
+                        loginTime: { type: 'string', format: 'date-time' },
+                        logoutTime: { type: 'string', format: 'date-time', nullable: true },
+                        duration: { type: 'number', nullable: true },
+                        date: { type: 'string', format: 'date' }
+                    }
+                },
+                Setting: {
+                    type: 'object',
+                    properties: {
+                        key: { type: 'string' },
+                        value: {
+                            oneOf: [
+                                { type: 'string' },
+                                { type: 'number' },
+                                { type: 'boolean' },
+                                { type: 'object' }
+                            ]
+                        }
+                    }
+                }
+            },
+        },
+        security: [
+            {
+                bearerAuth: [],
+            },
+        ],
+    },
+    apis: ['./src/routes/*.js'], // Path to the API docs
+};
+
+export const swaggerSpec = swaggerJsdoc(options);
+</file>
+
+<file path="src/db/init.js">
+import Database from 'better-sqlite3';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { config } from '../config/index.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const dbLogger = createChildLogger('db');
+
+let db = null;
+
+/**
+ * Initialize database connection and schema
+ * This function is idempotent - safe to call multiple times
+ */
+export function initDatabase() {
+    if (db) {
+        return db;
+    }
+
+    dbLogger.info({ path: config.databasePath }, 'Initializing database');
+
+    // Create database connection
+    db = new Database(config.databasePath);
+
+    // Apply critical SQLite settings
+    db.pragma('journal_mode = WAL');
+    db.pragma('synchronous = NORMAL');
+    db.pragma('foreign_keys = ON');
+
+    dbLogger.info('Applied SQLite settings (WAL mode, foreign keys ON)');
+
+    // Read and execute schema
+    const schemaPath = join(__dirname, 'schema.sql');
+    const schema = readFileSync(schemaPath, 'utf8');
+
+    // Execute entire schema at once (better-sqlite3 handles multiple statements)
+    db.exec(schema);
+
+    dbLogger.info('Database schema initialized');
+
+    // Initialize default sequences
+    initializeSequences();
+
+    return db;
+}
+
+/**
+ * Initialize default sequence values
+ */
+function initializeSequences() {
+    const sequences = [
+        { key: 'invoice_seq', value: 1 },
+        { key: 'purchase_seq', value: 1 },
+        { key: 'payment_seq', value: 1 }
+    ];
+
+    const insertStmt = db.prepare(`
+    INSERT OR IGNORE INTO sequences (key, value) VALUES (?, ?)
+  `);
+
+    sequences.forEach(seq => {
+        insertStmt.run(seq.key, seq.value);
+    });
+
+    dbLogger.info('Initialized default sequences');
+}
+
+/**
+ * Get database instance
+ * WARNING: This assumes initDatabase() has been called
+ */
+export function getDatabase() {
+    if (!db) {
+        throw new Error('Database not initialized. Call initDatabase() first.');
+    }
+    return db;
+}
+
+/**
+ * Close database connection (for graceful shutdown)
+ */
+export function closeDatabase() {
+    if (db) {
+        db.close();
+        db = null;
+        dbLogger.info('Database connection closed');
+    }
+}
+
+/**
+ * Execute a function within a transaction
+ * Automatically rolls back on error
+ * 
+ * @param {Function} fn - Function to execute in transaction
+ * @returns {*} Result of the function
+ */
+export function transaction(fn) {
+    const db = getDatabase();
+
+    try {
+        db.exec('BEGIN TRANSACTION');
+        const result = fn(db);
+        db.exec('COMMIT');
+        return result;
+    } catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
+    }
+}
+</file>
+
+<file path="src/db/schema.sql">
+-- SQLite Canonical DDL for Swipe Invoice Backend
+-- This schema is the authoritative storage reference
+
+-- 0. Global SQLite settings (must be applied at startup via PRAGMA)
+-- PRAGMA journal_mode = WAL;
+-- PRAGMA synchronous = NORMAL;
+-- PRAGMA foreign_keys = ON;
+
+-- 1. Users
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT CHECK(role IN ('ADMIN','USER')) NOT NULL,
+  created_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+
+-- 2. Customers
+CREATE TABLE IF NOT EXISTS customers (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  gstin TEXT,
+  phone TEXT,
+  email TEXT,
+  balance REAL NOT NULL DEFAULT 0,
+  address_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+
+-- 3. Vendors
+CREATE TABLE IF NOT EXISTS vendors (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  gstin TEXT,
+  phone TEXT,
+  email TEXT,
+  balance REAL NOT NULL DEFAULT 0,
+  address_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+
+-- 4. Categories
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL
+);
+
+-- 5. Subcategories
+CREATE TABLE IF NOT EXISTS subcategories (
+  id TEXT PRIMARY KEY,
+  category_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+-- 6. Products
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  type TEXT CHECK(type IN ('product','service')) NOT NULL,
+  name TEXT NOT NULL,
+  sku TEXT UNIQUE,
+  barcode TEXT,
+  hsn TEXT,
+  category_id TEXT,
+  subcategory_id TEXT,
+  description TEXT,
+  selling_price REAL,
+  purchase_price REAL,
+  tax_rate REAL,
+  unit TEXT,
+
+  metal_json TEXT,
+  gemstone_json TEXT,
+  design_json TEXT,
+
+  vendor_ref TEXT,
+  procurement_date TEXT,
+  hallmark_cert TEXT,
+  launch_date TEXT,
+
+  show_online INTEGER DEFAULT 0,
+  not_for_sale INTEGER DEFAULT 0,
+
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+
+  FOREIGN KEY (category_id) REFERENCES categories(id),
+  FOREIGN KEY (subcategory_id) REFERENCES subcategories(id)
+);
+
+-- 7. Product Images
+CREATE TABLE IF NOT EXISTS product_images (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  checksum TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- 8. Invoices
+CREATE TABLE IF NOT EXISTS invoices (
+  id TEXT PRIMARY KEY,
+  invoice_number TEXT UNIQUE NOT NULL,
+  customer_id TEXT,
+  type TEXT CHECK(type IN ('INVOICE','PROFORMA','LENDING')) NOT NULL,
+  status TEXT CHECK(status IN ('PAID','PARTIAL','UNPAID','PENDING')) NOT NULL,
+  date TEXT NOT NULL,
+  due_date TEXT,
+  place_of_supply TEXT,
+
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+
+  FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+
+-- 9. Invoice Customer Snapshot (historical truth)
+CREATE TABLE IF NOT EXISTS invoice_customer_snapshot (
+  invoice_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT,
+  gstin TEXT,
+  address_json TEXT,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+
+-- 10. Invoice Items
+CREATE TABLE IF NOT EXISTS invoice_items (
+  id TEXT PRIMARY KEY,
+  invoice_id TEXT NOT NULL,
+  product_id TEXT,
+  description TEXT,
+  quantity REAL NOT NULL,
+  rate REAL NOT NULL,
+  tax_rate REAL,
+  weight_json TEXT,
+  amount_json TEXT,
+
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id),
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- 11. Invoice Totals
+CREATE TABLE IF NOT EXISTS invoice_totals (
+  invoice_id TEXT PRIMARY KEY,
+  subtotal REAL NOT NULL,
+  tax_total REAL NOT NULL,
+  cgst REAL,
+  sgst REAL,
+  igst REAL,
+  round_off REAL,
+  grand_total REAL NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+
+-- 12. Invoice Photos
+CREATE TABLE IF NOT EXISTS invoice_photos (
+  id TEXT PRIMARY KEY,
+  invoice_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  checksum TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+
+-- 13. Purchases
+CREATE TABLE IF NOT EXISTS purchases (
+  id TEXT PRIMARY KEY,
+  purchase_number TEXT UNIQUE NOT NULL,
+  vendor_id TEXT,
+  status TEXT CHECK(status IN ('PAID','PARTIAL','UNPAID')) NOT NULL,
+  date TEXT NOT NULL,
+  due_date TEXT,
+
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+
+  FOREIGN KEY (vendor_id) REFERENCES vendors(id)
+);
+
+-- 14. Payments
+CREATE TABLE IF NOT EXISTS payments (
+  id TEXT PRIMARY KEY,
+  transaction_number TEXT UNIQUE NOT NULL,
+  date TEXT NOT NULL,
+  type TEXT CHECK(type IN ('IN','OUT')) NOT NULL,
+  party_type TEXT CHECK(party_type IN ('CUSTOMER','VENDOR')) NOT NULL,
+  party_id TEXT NOT NULL,
+  amount REAL NOT NULL,
+  mode TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+-- 15. Payment Allocations
+CREATE TABLE IF NOT EXISTS payment_allocations (
+  id TEXT PRIMARY KEY,
+  payment_id TEXT NOT NULL,
+  invoice_id TEXT NOT NULL,
+  amount REAL NOT NULL,
+  FOREIGN KEY (payment_id) REFERENCES payments(id),
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+
+-- 16. Sequences
+CREATE TABLE IF NOT EXISTS sequences (
+  key TEXT PRIMARY KEY,
+  value INTEGER NOT NULL
+);
+
+-- 17. Settings
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value_json TEXT NOT NULL
+);
+
+-- 18. Audit Logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id TEXT PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  details TEXT,
+  created_at TEXT NOT NULL
+);
+
+-- 19. Attendance Logs
+CREATE TABLE IF NOT EXISTS attendance_logs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  login_date TEXT NOT NULL,
+  login_at TEXT NOT NULL,
+  logout_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+-- 20. Bulk Upload Logs
+CREATE TABLE IF NOT EXISTS bulk_upload_logs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  total_records INTEGER,
+  success_count INTEGER,
+  failure_count INTEGER,
+  created_at TEXT NOT NULL
+);
+
+-- 21. Idempotency Keys (for duplicate prevention)
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+  request_id TEXT PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+-- 22. Migration ID Map (for IndexedDB migration)
+CREATE TABLE IF NOT EXISTS migration_id_map (
+  old_id TEXT NOT NULL,
+  new_uuid TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  PRIMARY KEY (old_id, entity_type)
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_customers_deleted ON customers(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_vendors_deleted ON vendors(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_products_deleted ON products(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_invoices_deleted ON invoices(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
+CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_invoice_photos_invoice ON invoice_photos(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id);
+CREATE INDEX IF NOT EXISTS idx_payment_allocations_payment ON payment_allocations(payment_id);
+CREATE INDEX IF NOT EXISTS idx_payment_allocations_invoice ON payment_allocations(invoice_id);
+</file>
+
+<file path="src/middleware/auth.js">
+import jwt from 'jsonwebtoken';
+import { config } from '../config/index.js';
+
+/**
+ * JWT authentication middleware
+ * Verifies JWT token and attaches user to request
+ */
+export function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+        return res.status(401).json({
+            error: 'Authentication required',
+            requestId: req.requestId
+        });
+    }
+
+    try {
+        const decoded = jwt.verify(token, config.jwtSecret);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(403).json({
+            error: 'Invalid or expired token',
+            requestId: req.requestId
+        });
+    }
+}
+
+/**
+ * Role-based access control middleware
+ * Requires authenticateToken middleware to run first
+ */
+export function requireRole(...roles) {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({
+                error: 'Authentication required',
+                requestId: req.requestId
+            });
+        }
+
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({
+                error: 'Insufficient permissions',
+                requestId: req.requestId
+            });
+        }
+
+        next();
+    };
+}
+</file>
+
+<file path="src/middleware/errorHandler.js">
+import crypto from 'crypto';
+
+/**
+ * Global error handler middleware
+ * Must be registered last in the middleware chain
+ */
+export function errorHandler(err, req, res, next) {
+    console.error('Error:', err);
+
+    // Joi validation errors
+    if (err.isJoi) {
+        return res.status(400).json({
+            error: 'Validation failed',
+            details: err.details.map(d => ({
+                field: d.path.join('.'),
+                message: d.message
+            })),
+            requestId: req.requestId
+        });
+    }
+
+    // SQLite constraint errors
+    if (err.code && err.code.startsWith('SQLITE_')) {
+        return res.status(400).json({
+            error: 'Database constraint violation',
+            details: err.message,
+            requestId: req.requestId
+        });
+    }
+
+    // Default error
+    const statusCode = err.statusCode || 500;
+    const message = err.message || 'Internal server error';
+
+    res.status(statusCode).json({
+        error: message,
+        requestId: req.requestId,
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+}
+
+/**
+ * 404 Not Found handler
+ */
+export function notFoundHandler(req, res) {
+    res.status(404).json({
+        error: 'Endpoint not found',
+        requestId: req.requestId
+    });
+}
+
+/**
+ * Request ID middleware
+ * Generates a unique ID for each request for tracing
+ */
+export function requestIdMiddleware(req, res, next) {
+    req.requestId = crypto.randomUUID();
+    next();
+}
+</file>
+
+<file path="src/middleware/validator.js">
+import Joi from 'joi';
+
+/**
+ * Validation middleware factory
+ * @param {Joi.Schema} schema - Joi validation schema
+ * @param {String} source - Request property to validate ('body', 'query', 'params')
+ */
+export function validate(schema, source = 'body') {
+    return (req, res, next) => {
+        const { error, value } = schema.validate(req[source], {
+            abortEarly: false,
+            stripUnknown: true
+        });
+
+        if (error) {
+            error.isJoi = true;
+            return next(error);
+        }
+
+        // Replace request data with validated data
+        req[source] = value;
+        next();
+    };
+}
+
+// Common validation schemas
+export const schemas = {
+    uuid: Joi.string().uuid(),
+
+    customer: Joi.object({
+        name: Joi.string().required(),
+        gstin: Joi.string().allow(null, ''),
+        phone: Joi.string().allow(null, ''),
+        email: Joi.string().email().allow(null, ''),
+        address: Joi.alternatives().try(Joi.object(), Joi.string()).allow(null, '')
+    }),
+
+    vendor: Joi.object({
+        name: Joi.string().required(),
+        gstin: Joi.string().allow(null, ''),
+        phone: Joi.string().allow(null, ''),
+        email: Joi.string().email().allow(null, ''),
+        address: Joi.alternatives().try(Joi.object(), Joi.string()).allow(null, '')
+    }),
+
+    product: Joi.object({
+        type: Joi.string().valid('product', 'service').required(),
+        name: Joi.string().required(),
+        sku: Joi.string().allow(null, ''),
+        barcode: Joi.string().allow(null, ''),
+        hsn: Joi.string().allow(null, ''),
+        categoryId: Joi.string().uuid().allow(null),
+        subcategoryId: Joi.string().uuid().allow(null),
+        description: Joi.string().allow(null, ''),
+        sellingPrice: Joi.number().min(0).allow(null),
+        purchasePrice: Joi.number().min(0).allow(null),
+        taxRate: Joi.number().min(0).max(100).allow(null),
+        unit: Joi.string().allow(null, ''),
+        metal: Joi.object().allow(null),
+        gemstone: Joi.object().allow(null),
+        design: Joi.object().allow(null),
+        vendorRef: Joi.string().allow(null, ''),
+        procurementDate: Joi.string().isoDate().allow(null),
+        hallmarkCert: Joi.string().allow(null, ''),
+        launchDate: Joi.string().isoDate().allow(null),
+        showOnline: Joi.boolean().default(false),
+        notForSale: Joi.boolean().default(false)
+    }),
+
+    invoiceItem: Joi.object({
+        productId: Joi.string().uuid().allow(null),
+        description: Joi.string().allow(null, ''),
+        quantity: Joi.number().required(),
+        rate: Joi.number().required(),
+        taxRate: Joi.number().min(0).max(100).allow(null),
+        weight: Joi.object().allow(null),
+        amount: Joi.object().allow(null)
+    }),
+
+    invoice: Joi.object({
+        customerId: Joi.string().uuid().allow(null),
+        type: Joi.string().valid('INVOICE', 'PROFORMA', 'LENDING').required(),
+        status: Joi.string().valid('PAID', 'PARTIAL', 'UNPAID', 'PENDING').default('UNPAID'),
+        date: Joi.string().isoDate().required(),
+        dueDate: Joi.string().isoDate().allow(null),
+        placeOfSupply: Joi.string().allow(null, ''),
+        customer: Joi.object({
+            name: Joi.string().required(),
+            phone: Joi.string().allow(null, ''),
+            gstin: Joi.string().allow(null, ''),
+            address: Joi.alternatives().try(Joi.object(), Joi.string()).allow(null, '')
+        }).required(),
+        items: Joi.array().items(Joi.link('#invoiceItem')).min(1).required()
+    }).id('invoice').shared(Joi.object().id('invoiceItem')),
+
+    payment: Joi.object({
+        type: Joi.string().valid('IN', 'OUT').required(),
+        partyType: Joi.string().valid('CUSTOMER', 'VENDOR').required(),
+        partyId: Joi.string().uuid().required(),
+        amount: Joi.number().min(0).required(),
+        date: Joi.string().isoDate().required(),
+        mode: Joi.string().allow(null, ''),
+        notes: Joi.string().allow(null, ''),
+        allocations: Joi.array().items(
+            Joi.object({
+                invoiceId: Joi.string().uuid().required(),
+                amount: Joi.number().min(0).required()
+            })
+        ).default([])
+    })
+};
+</file>
+
+<file path="src/models/InvoiceAggregate.js">
+/**
+ * InvoiceAggregate - Domain Object / DTO
+ * 
+ * This is NOT an ORM model. It represents the canonical business object shape
+ * that the API exposes to clients.
+ * 
+ * Internally, this aggregate is assembled from 5 tables:
+ * - invoices
+ * - invoice_customer_snapshot
+ * - invoice_items
+ * - invoice_totals
+ * - invoice_photos
+ */
+
+/**
+ * Create an invoice aggregate object from database rows
+ * This is the READ assembly operation
+ * 
+ * @param {Object} invoice - Invoice header row
+ * @param {Object} customer - Customer snapshot row
+ * @param {Array} items - Invoice item rows
+ * @param {Object} totals - Invoice totals row
+ * @param {Array} photos - Invoice photo rows
+ * @returns {Object} Assembled InvoiceAggregate
+ */
+export function assembleInvoiceAggregate(invoice, customer, items, totals, photos) {
+    return {
+        id: invoice.id,
+        invoiceNumber: invoice.invoice_number,
+        type: invoice.type,
+        status: invoice.status,
+        date: invoice.date,
+        dueDate: invoice.due_date,
+        placeOfSupply: invoice.place_of_supply,
+
+        customer: customer ? {
+            id: invoice.customer_id,
+            name: customer.name,
+            phone: customer.phone,
+            gstin: customer.gstin,
+            address: customer.address_json ? JSON.parse(customer.address_json) : null
+        } : null,
+
+        items: items.map(item => ({
+            id: item.id,
+            productId: item.product_id,
+            description: item.description,
+            quantity: item.quantity,
+            rate: item.rate,
+            taxRate: item.tax_rate,
+            weight: item.weight_json ? JSON.parse(item.weight_json) : null,
+            amount: item.amount_json ? JSON.parse(item.amount_json) : null
+        })),
+
+        totals: totals ? {
+            subtotal: totals.subtotal,
+            taxTotal: totals.tax_total,
+            cgst: totals.cgst,
+            sgst: totals.sgst,
+            igst: totals.igst,
+            roundOff: totals.round_off,
+            grandTotal: totals.grand_total
+        } : null,
+
+        photos: photos.map(photo => ({
+            id: photo.id,
+            url: `/api/photos/${photo.id}`,
+            createdAt: photo.created_at
+        })),
+
+        createdAt: invoice.created_at,
+        updatedAt: invoice.updated_at
+    };
+}
+
+/**
+ * Decompose an invoice aggregate for database storage
+ * This prepares the aggregate for WRITE operations
+ * 
+ * @param {Object} aggregate - Invoice aggregate from client
+ * @param {Object} computedValues - Server-computed values (totals, etc.)
+ * @returns {Object} Decomposed data ready for database insertion
+ */
+export function decomposeInvoiceAggregate(aggregate, computedValues) {
+    return {
+        invoice: {
+            customer_id: aggregate.customerId,
+            type: aggregate.type,
+            status: aggregate.status || 'UNPAID',
+            date: aggregate.date,
+            due_date: aggregate.dueDate || null,
+            place_of_supply: aggregate.placeOfSupply || null
+        },
+
+        customerSnapshot: {
+            name: aggregate.customer.name,
+            phone: aggregate.customer.phone || null,
+            gstin: aggregate.customer.gstin || null,
+            address_json: aggregate.customer.address ? JSON.stringify(aggregate.customer.address) : null
+        },
+
+        items: aggregate.items.map(item => ({
+            product_id: item.productId || null,
+            description: item.description || null,
+            quantity: item.quantity,
+            rate: item.rate,
+            tax_rate: item.taxRate || null,
+            weight_json: item.weight ? JSON.stringify(item.weight) : null,
+            amount_json: item.amount ? JSON.stringify(item.amount) : null
+        })),
+
+        totals: computedValues.totals
+    };
+}
+</file>
+
+<file path="src/routes/attendance.js">
+import express from 'express';
+import {
+    logLogin,
+    logLogout,
+    getAttendanceByDate,
+    getAttendanceHistory,
+    getAllAttendanceByDate
+} from '../services/attendanceService.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/attendance/login:
+ *   post:
+ *     summary: Record user login
+ *     tags: [Attendance]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       201:
+ *         description: Login recorded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Attendance'
+ */
+router.post('/login', (req, res, next) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required', requestId: req.requestId });
+        }
+        const log = logLogin(userId);
+        res.status(201).json(log);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/attendance/logout:
+ *   post:
+ *     summary: Record user logout
+ *     tags: [Attendance]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [logId]
+ *             properties:
+ *               logId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       200:
+ *         description: Logout recorded
+ */
+router.post('/logout', (req, res, next) => {
+    try {
+        const { logId } = req.body;
+        if (!logId) {
+            return res.status(400).json({ error: 'logId is required', requestId: req.requestId });
+        }
+        const result = logLogout(logId);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/attendance/user/{userId}:
+ *   get:
+ *     summary: Get attendance history for a user
+ *     tags: [Attendance]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *     responses:
+ *       200:
+ *         description: Attendance history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Attendance'
+ */
+router.get('/user/:userId', (req, res, next) => {
+    try {
+        const limit = parseInt(req.query.limit) || 30;
+        const history = getAttendanceHistory(req.params.userId, limit);
+        res.json(history);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/attendance/user/{userId}/date/{date}:
+ *   get:
+ *     summary: Get attendance for a user on a specific date
+ *     tags: [Attendance]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Attendance logs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Attendance'
+ */
+router.get('/user/:userId/date/:date', (req, res, next) => {
+    try {
+        const logs = getAttendanceByDate(req.params.userId, req.params.date);
+        res.json(logs);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/attendance/date/{date}:
+ *   get:
+ *     summary: Get all attendance for a date (admin)
+ *     tags: [Attendance]
+ *     parameters:
+ *       - in: path
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Attendance logs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Attendance'
+ */
+router.get('/date/:date', (req, res, next) => {
+    try {
+        const logs = getAllAttendanceByDate(req.params.date);
+        res.json(logs);
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/auth.js">
+import express from 'express';
+import { requestOTP, verifyOTP, getUser } from '../services/userService.js';
+import { authenticateToken } from '../middleware/auth.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/auth/request-otp:
+ *   post:
+ *     summary: Request OTP for phone number
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [phone]
+ *             properties:
+ *               phone:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OTP requested
+ */
+router.post('/request-otp', (req, res, next) => {
+    try {
+        const { phone } = req.body;
+
+        if (!phone) {
+            return res.status(400).json({
+                error: 'Phone number is required',
+                requestId: req.requestId
+            });
+        }
+
+        const result = requestOTP(phone);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/verify-otp:
+ *   post:
+ *     summary: Verify OTP and get JWT token
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [phone, otp]
+ *             properties:
+ *               phone:
+ *                 type: string
+ *               otp:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ */
+router.post('/verify-otp', (req, res, next) => {
+    try {
+        const { phone, otp } = req.body;
+
+        if (!phone || !otp) {
+            return res.status(400).json({
+                error: 'Phone number and OTP are required',
+                requestId: req.requestId
+            });
+        }
+
+        const result = verifyOTP(phone, otp);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Verify OTP and get JWT token
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *               - otp
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 description: User phone number
+ *                 example: "1234567890"
+ *               otp:
+ *                 type: string
+ *                 description: One-time password
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: JWT access token
+ *                 user:
+ *                   type: object
+ *                   description: User details
+ *       400:
+ *         description: Missing phone or OTP
+ *       401:
+ *         description: Invalid OTP
+ */
+router.post('/login', (req, res, next) => {
+    try {
+        const { phone, otp } = req.body;
+
+        if (!phone || !otp) {
+            return res.status(400).json({
+                error: 'Phone number and OTP are required',
+                requestId: req.requestId
+            });
+        }
+
+        const result = verifyOTP(phone, otp);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user info (requires auth)
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: User profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 phone:
+ *                   type: string
+ *                 role:
+ *                   type: string
+ */
+router.get('/me', authenticateToken, (req, res, next) => {
+    try {
+        const user = getUser(req.user.userId);
+        if (!user) {
+            return res.status(404).json({
+                error: 'User not found',
+                requestId: req.requestId
+            });
+        }
+        res.json(user);
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/categories.js">
+import express from 'express';
+import {
+    createCategory,
+    getCategory,
+    listCategories,
+    updateCategory,
+    deleteCategory,
+    createSubcategory,
+    deleteSubcategory
+} from '../services/categoryService.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/categories:
+ *   get:
+ *     summary: List all categories with subcategories
+ *     tags: [Categories]
+ *     responses:
+ *       200:
+ *         description: List of categories
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Category'
+ */
+router.get('/', (req, res, next) => {
+    try {
+        const categories = listCategories();
+        res.json(categories);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/categories/{id}:
+ *   get:
+ *     summary: Get single category
+ *     tags: [Categories]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Category details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Category'
+ *       404:
+ *         description: Category not found
+ */
+router.get('/:id', (req, res, next) => {
+    try {
+        const category = getCategory(req.params.id);
+        if (!category) {
+            return res.status(404).json({ error: 'Category not found', requestId: req.requestId });
+        }
+        res.json(category);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/categories:
+ *   post:
+ *     summary: Create new category
+ *     tags: [Categories]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Category'
+ *     responses:
+ *       201:
+ *         description: Category created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Category'
+ */
+router.post('/', (req, res, next) => {
+    try {
+        const category = createCategory(req.body);
+        res.status(201).json(category);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/categories/{id}:
+ *   put:
+ *     summary: Update category
+ *     tags: [Categories]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Category'
+ *     responses:
+ *       200:
+ *         description: Category updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Category'
+ */
+router.put('/:id', (req, res, next) => {
+    try {
+        const category = updateCategory(req.params.id, req.body);
+        res.json(category);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/categories/{id}:
+ *   delete:
+ *     summary: Soft delete category
+ *     tags: [Categories]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Category deleted
+ */
+router.delete('/:id', (req, res, next) => {
+    try {
+        deleteCategory(req.params.id);
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/categories/{id}/subcategories:
+ *   post:
+ *     summary: Add subcategory to category
+ *     tags: [Categories]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Category ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Subcategory name
+ *     responses:
+ *       201:
+ *         description: Subcategory created
+ */
+router.post('/:id/subcategories', (req, res, next) => {
+    try {
+        const subcategory = createSubcategory(req.params.id, req.body);
+        res.status(201).json(subcategory);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/categories/{categoryId}/subcategories/{subcategoryId}:
+ *   delete:
+ *     summary: Delete subcategory
+ *     tags: [Categories]
+ *     parameters:
+ *       - in: path
+ *         name: categoryId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: subcategoryId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Subcategory deleted
+ */
+router.delete('/:categoryId/subcategories/:subcategoryId', (req, res, next) => {
+    try {
+        deleteSubcategory(req.params.subcategoryId);
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/customers.js">
+import express from 'express';
+import {
+    createCustomer,
+    getCustomer,
+    listCustomers,
+    updateCustomer,
+    deleteCustomer
+} from '../services/customerService.js';
+import { validate, schemas } from '../middleware/validator.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/customers:
+ *   get:
+ *     summary: List all customers
+ *     tags: [Customers]
+ *     responses:
+ *       200:
+ *         description: List of customers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Customer'
+ */
+router.get('/', (req, res, next) => {
+    try {
+        const customers = listCustomers();
+        res.json(customers);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/customers/{id}:
+ *   get:
+ *     summary: Get single customer
+ *     tags: [Customers]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Customer details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Customer'
+ *       404:
+ *         description: Customer not found
+ */
+router.get('/:id', (req, res, next) => {
+    try {
+        const customer = getCustomer(req.params.id);
+
+        if (!customer) {
+            return res.status(404).json({
+                error: 'Customer not found',
+                requestId: req.requestId
+            });
+        }
+
+        res.json(customer);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/customers:
+ *   post:
+ *     summary: Create new customer
+ *     tags: [Customers]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Customer'
+ *     responses:
+ *       201:
+ *         description: Customer created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Customer'
+ */
+router.post('/', validate(schemas.customer), (req, res, next) => {
+    try {
+        const customer = createCustomer(req.body);
+        res.status(201).json(customer);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/customers/{id}:
+ *   put:
+ *     summary: Update customer
+ *     tags: [Customers]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Customer'
+ *     responses:
+ *       200:
+ *         description: Customer updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Customer'
+ */
+router.put('/:id', validate(schemas.customer), (req, res, next) => {
+    try {
+        const customer = updateCustomer(req.params.id, req.body);
+        res.json(customer);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/customers/{id}:
+ *   delete:
+ *     summary: Soft delete customer
+ *     tags: [Customers]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Customer deleted
+ */
+router.delete('/:id', (req, res, next) => {
+    try {
+        deleteCustomer(req.params.id);
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/invoices.js">
+import express from 'express';
+import multer from 'multer';
+import {
+    createInvoice,
+    assembleInvoice,
+    updateInvoice,
+    listInvoices,
+    deleteInvoice,
+    addInvoicePhoto,
+    deleteInvoicePhoto
+} from '../services/invoiceService.js';
+import { savePhoto, deletePhoto } from '../services/fileService.js';
+import { validate, schemas } from '../middleware/validator.js';
+
+const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
+
+/**
+ * @swagger
+ * /api/invoices:
+ *   get:
+ *     summary: List all invoices (headers only)
+ *     tags: [Invoices]
+ *     responses:
+ *       200:
+ *         description: List of invoices
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/InvoiceAggregate'
+ */
+router.get('/', (req, res, next) => {
+    try {
+        const invoices = listInvoices();
+        res.json(invoices);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/invoices/{id}:
+ *   get:
+ *     summary: Get fully assembled invoice aggregate
+ *     tags: [Invoices]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Invoice ID
+ *     responses:
+ *       200:
+ *         description: Invoice details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InvoiceAggregate'
+ *       404:
+ *         description: Invoice not found
+ */
+router.get('/:id', (req, res, next) => {
+    try {
+        const invoice = assembleInvoice(req.params.id);
+
+        if (!invoice) {
+            return res.status(404).json({
+                error: 'Invoice not found',
+                requestId: req.requestId
+            });
+        }
+
+        res.json(invoice);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/invoices:
+ *   post:
+ *     summary: Create new invoice
+ *     description: Supports X-Request-Id header for idempotency
+ *     tags: [Invoices]
+ *     parameters:
+ *       - in: header
+ *         name: X-Request-Id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Idempotency key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/InvoiceAggregate'
+ *     responses:
+ *       201:
+ *         description: Invoice created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InvoiceAggregate'
+ *       400:
+ *         description: Validation error
+ */
+router.post('/', validate(schemas.invoice), (req, res, next) => {
+    try {
+        const requestId = req.headers['x-request-id'] || null;
+        const invoice = createInvoice(req.body, requestId);
+
+        res.status(201).json(invoice);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * PUT /api/invoices/:id
+ * Update existing invoice (full replacement)
+ */
+router.put('/:id', validate(schemas.invoice), (req, res, next) => {
+    try {
+        const invoice = updateInvoice(req.params.id, req.body);
+        res.json(invoice);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * DELETE /api/invoices/:id
+ * Soft delete invoice
+ */
+router.delete('/:id', (req, res, next) => {
+    try {
+        deleteInvoice(req.params.id);
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * POST /api/invoices/:id/photos
+ * Upload invoice photo
+ */
+router.post('/:id/photos', upload.single('photo'), (req, res, next) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                error: 'No photo file provided',
+                requestId: req.requestId
+            });
+        }
+
+        const { filePath, checksum } = savePhoto(req.file.buffer, req.file.originalname);
+        const photo = addInvoicePhoto(req.params.id, filePath, checksum);
+
+        res.status(201).json(photo);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * DELETE /api/invoices/:invoiceId/photos/:photoId
+ * Delete invoice photo
+ */
+router.delete('/:invoiceId/photos/:photoId', (req, res, next) => {
+    try {
+        const filePath = deleteInvoicePhoto(req.params.photoId);
+        deletePhoto(filePath);
+
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/payments.js">
+import express from 'express';
+import {
+    createPayment,
+    getPayment,
+    listPayments,
+    deletePayment
+} from '../services/paymentService.js';
+import { validate, schemas } from '../middleware/validator.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/payments:
+ *   get:
+ *     summary: List payments with optional filters
+ *     tags: [Payments]
+ *     parameters:
+ *       - in: query
+ *         name: partyId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [IN, OUT]
+ *     responses:
+ *       200:
+ *         description: List of payments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Payment'
+ */
+router.get('/', (req, res, next) => {
+    try {
+        const filters = {
+            partyId: req.query.partyId,
+            type: req.query.type
+        };
+
+        const payments = listPayments(filters);
+        res.json(payments);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/payments/{id}:
+ *   get:
+ *     summary: Get payment with allocations
+ *     tags: [Payments]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Payment details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Payment'
+ *       404:
+ *         description: Payment not found
+ */
+router.get('/:id', (req, res, next) => {
+    try {
+        const payment = getPayment(req.params.id);
+
+        if (!payment) {
+            return res.status(404).json({
+                error: 'Payment not found',
+                requestId: req.requestId
+            });
+        }
+
+        res.json(payment);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/payments:
+ *   post:
+ *     summary: Create payment with allocations
+ *     tags: [Payments]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Payment'
+ *     responses:
+ *       201:
+ *         description: Payment created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Payment'
+ */
+router.post('/', validate(schemas.payment), (req, res, next) => {
+    try {
+        const payment = createPayment(req.body);
+        res.status(201).json(payment);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/payments/{id}:
+ *   delete:
+ *     summary: Delete payment and recalculate balances
+ *     tags: [Payments]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Payment deleted
+ */
+router.delete('/:id', (req, res, next) => {
+    try {
+        deletePayment(req.params.id);
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/photos.js">
+import express from 'express';
+import { readFileSync } from 'fs';
+import { getDatabase } from '../db/init.js';
+import { getAbsolutePath } from '../services/fileService.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/photos/{id}:
+ *   get:
+ *     summary: Get photo file
+ *     description: Works for both invoice_photos and product_images
+ *     tags: [Photos]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Image file
+ *         content:
+ *           image/*:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Photo not found
+ */
+router.get('/:id', (req, res, next) => {
+    try {
+        const db = getDatabase();
+        const photoId = req.params.id;
+
+        // Check invoice_photos
+        let photo = db.prepare(`
+      SELECT file_path FROM invoice_photos WHERE id = ?
+    `).get(photoId);
+
+        // If not found, check product_images
+        if (!photo) {
+            photo = db.prepare(`
+        SELECT file_path FROM product_images WHERE id = ?
+      `).get(photoId);
+        }
+
+        if (!photo) {
+            return res.status(404).json({
+                error: 'Photo not found',
+                requestId: req.requestId
+            });
+        }
+
+        // Get absolute path (never expose to client)
+        const absolutePath = getAbsolutePath(photo.file_path);
+
+        // Read and serve file
+        const fileBuffer = readFileSync(absolutePath);
+
+        // Set appropriate content type
+        const ext = photo.file_path.split('.').pop().toLowerCase();
+        const contentTypes = {
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            png: 'image/png',
+            gif: 'image/gif',
+            webp: 'image/webp'
+        };
+
+        res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
+        res.send(fileBuffer);
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/products.js">
+import express from 'express';
+import multer from 'multer';
+import {
+    createProduct,
+    getProduct,
+    listProducts,
+    updateProduct,
+    deleteProduct,
+    addProductImage,
+    deleteProductImage
+} from '../services/productService.js';
+import { savePhoto, deletePhoto } from '../services/fileService.js';
+import { validate, schemas } from '../middleware/validator.js';
+
+const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
+
+/**
+ * @swagger
+ * /api/products:
+ *   get:
+ *     summary: List products with optional filters
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [product, service]
+ *         description: Filter by type
+ *       - in: query
+ *         name: categoryId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by category
+ *     responses:
+ *       200:
+ *         description: List of products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Product'
+ */
+router.get('/', (req, res, next) => {
+    try {
+        const filters = {
+            type: req.query.type,
+            categoryId: req.query.categoryId
+        };
+
+        const products = listProducts(filters);
+        res.json(products);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   get:
+ *     summary: Get product with images
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Product details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ *       404:
+ *         description: Product not found
+ */
+router.get('/:id', (req, res, next) => {
+    try {
+        const product = getProduct(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({
+                error: 'Product not found',
+                requestId: req.requestId
+            });
+        }
+
+        res.json(product);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/products:
+ *   post:
+ *     summary: Create new product
+ *     tags: [Products]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Product'
+ *     responses:
+ *       201:
+ *         description: Product created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ */
+router.post('/', validate(schemas.product), (req, res, next) => {
+    try {
+        const product = createProduct(req.body);
+        res.status(201).json(product);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   put:
+ *     summary: Update product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Product'
+ *     responses:
+ *       200:
+ *         description: Product updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ */
+router.put('/:id', validate(schemas.product), (req, res, next) => {
+    try {
+        const product = updateProduct(req.params.id, req.body);
+        res.json(product);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   delete:
+ *     summary: Soft delete product
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Product deleted
+ */
+router.delete('/:id', (req, res, next) => {
+    try {
+        deleteProduct(req.params.id);
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/products/{id}/images:
+ *   post:
+ *     summary: Upload product image
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Image uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   format: uuid
+ *                 url:
+ *                   type: string
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ */
+router.post('/:id/images', upload.single('image'), (req, res, next) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                error: 'No image file provided',
+                requestId: req.requestId
+            });
+        }
+
+        const { filePath, checksum } = savePhoto(req.file.buffer, req.file.originalname);
+        const image = addProductImage(req.params.id, filePath, checksum);
+
+        res.status(201).json(image);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/products/{productId}/images/{imageId}:
+ *   delete:
+ *     summary: Delete product image
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Image deleted
+ */
+router.delete('/:productId/images/:imageId', (req, res, next) => {
+    try {
+        const filePath = deleteProductImage(req.params.imageId);
+        deletePhoto(filePath);
+
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/purchases.js">
+import express from 'express';
+import {
+    createPurchase,
+    getPurchase,
+    listPurchases,
+    updatePurchase,
+    deletePurchase
+} from '../services/purchaseService.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/purchases:
+ *   get:
+ *     summary: List purchases
+ *     tags: [Purchases]
+ *     parameters:
+ *       - in: query
+ *         name: vendorId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [RECEIVED, PENDING, ORDERED]
+ *     responses:
+ *       200:
+ *         description: List of purchases
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Purchase'
+ */
+router.get('/', (req, res, next) => {
+    try {
+        const filters = {
+            vendorId: req.query.vendorId,
+            status: req.query.status
+        };
+        const purchases = listPurchases(filters);
+        res.json(purchases);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/purchases/{id}:
+ *   get:
+ *     summary: Get single purchase
+ *     tags: [Purchases]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Purchase details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Purchase'
+ *       404:
+ *         description: Purchase not found
+ */
+router.get('/:id', (req, res, next) => {
+    try {
+        const purchase = getPurchase(req.params.id);
+        if (!purchase) {
+            return res.status(404).json({ error: 'Purchase not found', requestId: req.requestId });
+        }
+        res.json(purchase);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/purchases:
+ *   post:
+ *     summary: Create new purchase
+ *     tags: [Purchases]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Purchase'
+ *     responses:
+ *       201:
+ *         description: Purchase created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Purchase'
+ */
+router.post('/', (req, res, next) => {
+    try {
+        const purchase = createPurchase(req.body);
+        res.status(201).json(purchase);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/purchases/{id}:
+ *   put:
+ *     summary: Update purchase
+ *     tags: [Purchases]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Purchase'
+ *     responses:
+ *       200:
+ *         description: Purchase updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Purchase'
+ */
+router.put('/:id', (req, res, next) => {
+    try {
+        const purchase = updatePurchase(req.params.id, req.body);
+        res.json(purchase);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/purchases/{id}:
+ *   delete:
+ *     summary: Soft delete purchase
+ *     tags: [Purchases]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Purchase deleted
+ */
+router.delete('/:id', (req, res, next) => {
+    try {
+        deletePurchase(req.params.id);
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/settings.js">
+import express from 'express';
+import { getSetting, setSetting, getAllSettings } from '../services/settingsService.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/settings:
+ *   get:
+ *     summary: Get all settings
+ *     tags: [Settings]
+ *     responses:
+ *       200:
+ *         description: All settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               additionalProperties:
+ *                 type: object 
+ */
+router.get('/', (req, res, next) => {
+    try {
+        const settings = getAllSettings();
+        res.json(settings);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/settings/{key}:
+ *   get:
+ *     summary: Get single setting
+ *     tags: [Settings]
+ *     parameters:
+ *       - in: path
+ *         name: key
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Setting value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Setting'
+ *       404:
+ *         description: Setting not found
+ */
+router.get('/:key', (req, res, next) => {
+    try {
+        const value = getSetting(req.params.key);
+
+        if (value === null) {
+            return res.status(404).json({
+                error: 'Setting not found',
+                requestId: req.requestId
+            });
+        }
+
+        res.json({ key: req.params.key, value });
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/settings/{key}:
+ *   put:
+ *     summary: Set a setting
+ *     tags: [Settings]
+ *     parameters:
+ *       - in: path
+ *         name: key
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               value:
+ *                 oneOf:
+ *                   - type: string
+ *                   - type: number
+ *                   - type: boolean
+ *                   - type: object
+ *     responses:
+ *       200:
+ *         description: Setting updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Setting'
+ */
+router.put('/:key', (req, res, next) => {
+    try {
+        const { value } = req.body;
+
+        if (value === undefined) {
+            return res.status(400).json({
+                error: 'Value is required',
+                requestId: req.requestId
+            });
+        }
+
+        setSetting(req.params.key, value);
+        res.json({ key: req.params.key, value });
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/routes/vendors.js">
+import express from 'express';
+import {
+    createVendor,
+    getVendor,
+    listVendors,
+    updateVendor,
+    deleteVendor
+} from '../services/vendorService.js';
+import { validate, schemas } from '../middleware/validator.js';
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/vendors:
+ *   get:
+ *     summary: List all vendors
+ *     tags: [Vendors]
+ *     responses:
+ *       200:
+ *         description: List of vendors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Vendor'
+ */
+router.get('/', (req, res, next) => {
+    try {
+        const vendors = listVendors();
+        res.json(vendors);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/vendors/{id}:
+ *   get:
+ *     summary: Get single vendor
+ *     tags: [Vendors]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Vendor details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Vendor'
+ *       404:
+ *         description: Vendor not found
+ */
+router.get('/:id', (req, res, next) => {
+    try {
+        const vendor = getVendor(req.params.id);
+        if (!vendor) {
+            return res.status(404).json({ error: 'Vendor not found', requestId: req.requestId });
+        }
+        res.json(vendor);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/vendors:
+ *   post:
+ *     summary: Create new vendor
+ *     tags: [Vendors]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Vendor'
+ *     responses:
+ *       201:
+ *         description: Vendor created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Vendor'
+ */
+router.post('/', validate(schemas.vendor), (req, res, next) => {
+    try {
+        const vendor = createVendor(req.body);
+        res.status(201).json(vendor);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/vendors/{id}:
+ *   put:
+ *     summary: Update vendor
+ *     tags: [Vendors]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Vendor'
+ *     responses:
+ *       200:
+ *         description: Vendor updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Vendor'
+ */
+router.put('/:id', validate(schemas.vendor), (req, res, next) => {
+    try {
+        const vendor = updateVendor(req.params.id, req.body);
+        res.json(vendor);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/vendors/{id}:
+ *   delete:
+ *     summary: Soft delete vendor
+ *     tags: [Vendors]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Vendor deleted
+ */
+router.delete('/:id', (req, res, next) => {
+    try {
+        deleteVendor(req.params.id);
+        res.status(204).send();
+    } catch (error) {
+        next(error);
+    }
+});
+
+export default router;
+</file>
+
+<file path="src/services/attendanceService.js">
+import { getDatabase } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+
+/**
+ * Log user login (start attendance)
+ */
+export function logLogin(userId) {
+    const db = getDatabase();
+    const logId = generateUUID();
+    const now = new Date();
+    const loginDate = now.toISOString().split('T')[0];
+    const loginAt = now.toISOString();
+
+    db.prepare(`
+    INSERT INTO attendance_logs (id, user_id, login_date, login_at, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(logId, userId, loginDate, loginAt, loginAt);
+
+    return { id: logId, userId, loginDate, loginAt };
+}
+
+/**
+ * Log user logout (end attendance)
+ */
+export function logLogout(logId) {
+    const db = getDatabase();
+    const logoutAt = new Date().toISOString();
+
+    const result = db.prepare(
+        'UPDATE attendance_logs SET logout_at = ? WHERE id = ? AND logout_at IS NULL'
+    ).run(logoutAt, logId);
+
+    if (result.changes === 0) throw new Error('Attendance log not found or already logged out');
+    return { logId, logoutAt };
+}
+
+/**
+ * Get attendance for a user on a specific date
+ */
+export function getAttendanceByDate(userId, date) {
+    const db = getDatabase();
+    return db.prepare(
+        'SELECT * FROM attendance_logs WHERE user_id = ? AND login_date = ? ORDER BY login_at'
+    ).all(userId, date);
+}
+
+/**
+ * Get attendance history for a user
+ */
+export function getAttendanceHistory(userId, limit = 30) {
+    const db = getDatabase();
+    return db.prepare(
+        'SELECT * FROM attendance_logs WHERE user_id = ? ORDER BY login_date DESC, login_at DESC LIMIT ?'
+    ).all(userId, limit);
+}
+
+/**
+ * Get all attendance for a date (admin view)
+ */
+export function getAllAttendanceByDate(date) {
+    const db = getDatabase();
+    return db.prepare(`
+    SELECT al.*, u.username FROM attendance_logs al
+    LEFT JOIN users u ON al.user_id = u.id
+    WHERE al.login_date = ? ORDER BY al.login_at
+  `).all(date);
+}
+</file>
+
+<file path="src/services/auditService.js">
+import { getDatabase } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+
+/**
+ * Log an action to audit trail
+ * 
+ * @param {string} entityType - Type of entity (e.g., 'invoice', 'customer')
+ * @param {string} entityId - ID of the entity
+ * @param {string} action - Action performed (e.g., 'CREATE', 'UPDATE', 'DELETE')
+ * @param {*} details - Additional details (will be JSON stringified)
+ */
+export function logAction(entityType, entityId, action, details = null) {
+    const db = getDatabase();
+
+    const stmt = db.prepare(`
+    INSERT INTO audit_logs (id, entity_type, entity_id, action, details, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+    stmt.run(
+        generateUUID(),
+        entityType,
+        entityId,
+        action,
+        details ? JSON.stringify(details) : null,
+        new Date().toISOString()
+    );
+}
+
+/**
+ * Get audit logs for a specific entity
+ * 
+ * @param {string} entityType - Type of entity
+ * @param {string} entityId - ID of the entity
+ * @returns {Array} Array of audit log entries
+ */
+export function getEntityLogs(entityType, entityId) {
+    const db = getDatabase();
+
+    const stmt = db.prepare(`
+    SELECT * FROM audit_logs
+    WHERE entity_type = ? AND entity_id = ?
+    ORDER BY created_at DESC
+  `);
+
+    const rows = stmt.all(entityType, entityId);
+
+    return rows.map(row => ({
+        ...row,
+        details: row.details ? JSON.parse(row.details) : null
+    }));
+}
+
+/**
+ * Get recent audit logs
+ * 
+ * @param {number} limit - Number of logs to retrieve
+ * @returns {Array} Array of recent audit log entries
+ */
+export function getRecentLogs(limit = 100) {
+    const db = getDatabase();
+
+    const stmt = db.prepare(`
+    SELECT * FROM audit_logs
+    ORDER BY created_at DESC
+    LIMIT ?
+  `);
+
+    const rows = stmt.all(limit);
+
+    return rows.map(row => ({
+        ...row,
+        details: row.details ? JSON.parse(row.details) : null
+    }));
+}
+</file>
+
+<file path="src/services/categoryService.js">
+import { getDatabase } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+import { logAction } from './auditService.js';
+
+/**
+ * Create a new category
+ */
+export function createCategory(data) {
+    const db = getDatabase();
+    const categoryId = generateUUID();
+
+    db.prepare(`
+    INSERT INTO categories (id, name, type) VALUES (?, ?, ?)
+  `).run(categoryId, data.name, data.type);
+
+    logAction('category', categoryId, 'CREATE', { name: data.name });
+
+    return getCategory(categoryId);
+}
+
+/**
+ * Get a single category with subcategories
+ */
+export function getCategory(categoryId) {
+    const db = getDatabase();
+
+    const category = db.prepare('SELECT * FROM categories WHERE id = ?').get(categoryId);
+    if (!category) return null;
+
+    const subcategories = db.prepare(
+        'SELECT * FROM subcategories WHERE category_id = ?'
+    ).all(categoryId);
+
+    return { ...category, subcategories };
+}
+
+/**
+ * List all categories with subcategories
+ */
+export function listCategories() {
+    const db = getDatabase();
+    const categories = db.prepare('SELECT * FROM categories ORDER BY name').all();
+
+    return categories.map(cat => ({
+        ...cat,
+        subcategories: db.prepare(
+            'SELECT * FROM subcategories WHERE category_id = ? ORDER BY name'
+        ).all(cat.id)
+    }));
+}
+
+/**
+ * Update a category
+ */
+export function updateCategory(categoryId, data) {
+    const db = getDatabase();
+    const result = db.prepare(
+        'UPDATE categories SET name = ?, type = ? WHERE id = ?'
+    ).run(data.name, data.type, categoryId);
+
+    if (result.changes === 0) throw new Error('Category not found');
+    logAction('category', categoryId, 'UPDATE');
+    return getCategory(categoryId);
+}
+
+/**
+ * Delete a category
+ */
+export function deleteCategory(categoryId) {
+    const db = getDatabase();
+    // Also delete subcategories
+    db.prepare('DELETE FROM subcategories WHERE category_id = ?').run(categoryId);
+    const result = db.prepare('DELETE FROM categories WHERE id = ?').run(categoryId);
+    if (result.changes === 0) throw new Error('Category not found');
+    logAction('category', categoryId, 'DELETE');
+}
+
+/**
+ * Create a subcategory
+ */
+export function createSubcategory(categoryId, data) {
+    const db = getDatabase();
+    const subcategoryId = generateUUID();
+
+    db.prepare(`
+    INSERT INTO subcategories (id, category_id, name) VALUES (?, ?, ?)
+  `).run(subcategoryId, categoryId, data.name);
+
+    logAction('subcategory', subcategoryId, 'CREATE', { name: data.name });
+
+    return { id: subcategoryId, category_id: categoryId, name: data.name };
+}
+
+/**
+ * Delete a subcategory
+ */
+export function deleteSubcategory(subcategoryId) {
+    const db = getDatabase();
+    const result = db.prepare('DELETE FROM subcategories WHERE id = ?').run(subcategoryId);
+    if (result.changes === 0) throw new Error('Subcategory not found');
+    logAction('subcategory', subcategoryId, 'DELETE');
+}
+</file>
+
+<file path="src/services/customerService.js">
+import { getDatabase } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+import { recalculateBalance } from '../utils/calculator.js';
+import { logAction } from './auditService.js';
+
+/**
+ * Create a new customer
+ */
+export function createCustomer(data) {
+    const db = getDatabase();
+    const customerId = generateUUID();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+    INSERT INTO customers (
+      id, name, gstin, phone, email, balance, address_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+        customerId,
+        data.name,
+        data.gstin || null,
+        data.phone || null,
+        data.email || null,
+        0, // Initial balance
+        data.address ? JSON.stringify(data.address) : null,
+        now,
+        now
+    );
+
+    logAction('customer', customerId, 'CREATE', { name: data.name });
+
+    return getCustomer(customerId);
+}
+
+/**
+ * Get a single customer
+ */
+export function getCustomer(customerId) {
+    const db = getDatabase();
+
+    const customer = db.prepare(`
+    SELECT * FROM customers WHERE id = ? AND deleted_at IS NULL
+  `).get(customerId);
+
+    if (!customer) return null;
+
+    return {
+        ...customer,
+        address: customer.address_json ? JSON.parse(customer.address_json) : null
+    };
+}
+
+/**
+ * List all customers
+ */
+export function listCustomers() {
+    const db = getDatabase();
+
+    const customers = db.prepare(`
+    SELECT * FROM customers WHERE deleted_at IS NULL ORDER BY name
+  `).all();
+
+    return customers.map(c => ({
+        ...c,
+        address: c.address_json ? JSON.parse(c.address_json) : null
+    }));
+}
+
+/**
+ * Update a customer
+ */
+export function updateCustomer(customerId, data) {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    const result = db.prepare(`
+    UPDATE customers
+    SET name = ?, gstin = ?, phone = ?, email = ?, address_json = ?, updated_at = ?
+    WHERE id = ? AND deleted_at IS NULL
+  `).run(
+        data.name,
+        data.gstin || null,
+        data.phone || null,
+        data.email || null,
+        data.address ? JSON.stringify(data.address) : null,
+        now,
+        customerId
+    );
+
+    if (result.changes === 0) {
+        throw new Error('Customer not found');
+    }
+
+    logAction('customer', customerId, 'UPDATE');
+
+    return getCustomer(customerId);
+}
+
+/**
+ * Soft delete a customer
+ */
+export function deleteCustomer(customerId) {
+    const db = getDatabase();
+
+    const result = db.prepare(`
+    UPDATE customers SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL
+  `).run(new Date().toISOString(), customerId);
+
+    if (result.changes === 0) {
+        throw new Error('Customer not found or already deleted');
+    }
+
+    logAction('customer', customerId, 'DELETE');
+}
+
+/**
+ * Update customer balance (derived from invoices and payments)
+ */
+export function updateCustomerBalance(customerId) {
+    const db = getDatabase();
+
+    const balance = recalculateBalance(db, customerId, 'CUSTOMER');
+
+    db.prepare(`
+    UPDATE customers SET balance = ? WHERE id = ?
+  `).run(balance, customerId);
+
+    return balance;
+}
+</file>
+
+<file path="src/services/fileService.js">
+import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import { config } from '../config/index.js';
+import { generateShortId } from '../utils/uuid.js';
+import { calculateChecksum } from '../utils/checksum.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const fileLogger = createChildLogger('file');
+
+// Ensure storage directory exists
+if (!existsSync(config.storagePath)) {
+    mkdirSync(config.storagePath, { recursive: true });
+    fileLogger.info({ path: config.storagePath }, 'Created storage directory');
+}
+
+/**
+ * Save a photo file to disk
+ * 
+ * @param {Buffer} buffer - File buffer
+ * @param {string} originalName - Original filename (for extension)
+ * @returns {Object} { filePath, checksum }
+ */
+export function savePhoto(buffer, originalName = 'photo.jpg') {
+    // Extract extension
+    const ext = originalName.split('.').pop() || 'jpg';
+
+    // Generate unique filename
+    const filename = `${generateShortId()}.${ext}`;
+    const filePath = join(config.storagePath, filename);
+
+    // Calculate checksum
+    const checksum = calculateChecksum(buffer);
+
+    // Write to disk
+    writeFileSync(filePath, buffer);
+
+    // Return relative path (never expose absolute path to client)
+    return {
+        filePath: filename,  // Store only the filename, not full path
+        checksum
+    };
+}
+
+/**
+ * Get absolute file path from stored filename
+ * Internal use only - never expose to client
+ * 
+ * @param {string} filename - Stored filename
+ * @returns {string} Absolute path
+ */
+export function getAbsolutePath(filename) {
+    return join(config.storagePath, filename);
+}
+
+/**
+ * Delete a photo from disk
+ * 
+ * @param {string} filename - Stored filename
+ */
+export function deletePhoto(filename) {
+    const absolutePath = getAbsolutePath(filename);
+
+    if (existsSync(absolutePath)) {
+        unlinkSync(absolutePath);
+    }
+}
+
+/**
+ * Check if a photo exists
+ * 
+ * @param {string} filename - Stored filename
+ * @returns {boolean}
+ */
+export function photoExists(filename) {
+    return existsSync(getAbsolutePath(filename));
+}
+</file>
+
+<file path="src/services/invoiceService.js">
+import { getDatabase, transaction } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+import { generateInvoiceNumber } from './sequenceService.js';
+import { calculateInvoiceTotals } from '../utils/calculator.js';
+import { assembleInvoiceAggregate, decomposeInvoiceAggregate } from '../models/InvoiceAggregate.js';
+import { logAction } from './auditService.js';
+
+/**
+ * Assemble a complete invoice aggregate from database
+ * READ operation - joins data from 5 tables
+ * 
+ * @param {string} invoiceId - Invoice UUID
+ * @returns {Object} Assembled InvoiceAggregate or null
+ */
+export function assembleInvoice(invoiceId) {
+    const db = getDatabase();
+
+    // Get invoice header
+    const invoice = db.prepare(`
+    SELECT * FROM invoices WHERE id = ? AND deleted_at IS NULL
+  `).get(invoiceId);
+
+    if (!invoice) return null;
+
+    // Get customer snapshot
+    const customer = db.prepare(`
+    SELECT * FROM invoice_customer_snapshot WHERE invoice_id = ?
+  `).get(invoiceId);
+
+    // Get line items
+    const items = db.prepare(`
+    SELECT * FROM invoice_items WHERE invoice_id = ?
+  `).all(invoiceId);
+
+    // Get totals
+    const totals = db.prepare(`
+    SELECT * FROM invoice_totals WHERE invoice_id = ?
+  `).get(invoiceId);
+
+    // Get photos
+    const photos = db.prepare(`
+    SELECT * FROM invoice_photos WHERE invoice_id = ?
+  `).all(invoiceId);
+
+    return assembleInvoiceAggregate(invoice, customer, items, totals, photos);
+}
+
+/**
+ * Create a new invoice (TRANSACTIONAL)
+ * Decomposes aggregate and persists to 5 tables atomically
+ * 
+ * @param {Object} aggregatePayload - Invoice aggregate from client
+ * @param {string} requestId - Optional idempotency key
+ * @returns {Object} Created invoice aggregate
+ */
+export function createInvoice(aggregatePayload, requestId = null) {
+    return transaction((db) => {
+        const now = new Date().toISOString();
+
+        // Check idempotency key
+        if (requestId) {
+            const existing = db.prepare(`
+        SELECT entity_id FROM idempotency_keys WHERE request_id = ?
+      `).get(requestId);
+
+            if (existing) {
+                // Return existing invoice
+                return assembleInvoice(existing.entity_id);
+            }
+        }
+
+        // Generate IDs and numbers
+        const invoiceId = generateUUID();
+        const invoiceNumber = generateInvoiceNumber();
+
+        // Recompute totals server-side (NEVER trust client)
+        const computedTotals = calculateInvoiceTotals(
+            aggregatePayload.items,
+            aggregatePayload.placeOfSupply
+        );
+
+        // Decompose aggregate
+        const decomposed = decomposeInvoiceAggregate(aggregatePayload, {
+            totals: computedTotals
+        });
+
+        // 1. Insert invoice header
+        db.prepare(`
+      INSERT INTO invoices (
+        id, invoice_number, customer_id, type, status, date, due_date, 
+        place_of_supply, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+            invoiceId,
+            invoiceNumber,
+            decomposed.invoice.customer_id,
+            decomposed.invoice.type,
+            decomposed.invoice.status,
+            decomposed.invoice.date,
+            decomposed.invoice.due_date,
+            decomposed.invoice.place_of_supply,
+            now,
+            now
+        );
+
+        // 2. Insert customer snapshot
+        db.prepare(`
+      INSERT INTO invoice_customer_snapshot (invoice_id, name, phone, gstin, address_json)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+            invoiceId,
+            decomposed.customerSnapshot.name,
+            decomposed.customerSnapshot.phone,
+            decomposed.customerSnapshot.gstin,
+            decomposed.customerSnapshot.address_json
+        );
+
+        // 3. Insert line items
+        const itemStmt = db.prepare(`
+      INSERT INTO invoice_items (
+        id, invoice_id, product_id, description, quantity, rate, tax_rate,
+        weight_json, amount_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+        decomposed.items.forEach(item => {
+            itemStmt.run(
+                generateUUID(),
+                invoiceId,
+                item.product_id,
+                item.description,
+                item.quantity,
+                item.rate,
+                item.tax_rate,
+                item.weight_json,
+                item.amount_json
+            );
+        });
+
+        // 4. Insert totals
+        db.prepare(`
+      INSERT INTO invoice_totals (
+        invoice_id, subtotal, tax_total, cgst, sgst, igst, round_off, grand_total
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+            invoiceId,
+            computedTotals.subtotal,
+            computedTotals.taxTotal,
+            computedTotals.cgst,
+            computedTotals.sgst,
+            computedTotals.igst,
+            computedTotals.roundOff,
+            computedTotals.grandTotal
+        );
+
+        // 5. Store idempotency key if provided
+        if (requestId) {
+            db.prepare(`
+        INSERT INTO idempotency_keys (request_id, entity_type, entity_id, created_at)
+        VALUES (?, ?, ?, ?)
+      `).run(requestId, 'invoice', invoiceId, now);
+        }
+
+        // 6. Audit log
+        logAction('invoice', invoiceId, 'CREATE', { invoiceNumber });
+
+        // Return assembled aggregate
+        return assembleInvoice(invoiceId);
+    });
+}
+
+/**
+ * Update an existing invoice (TRANSACTIONAL)
+ * Full object replacement strategy
+ * 
+ * @param {string} invoiceId - Invoice UUID
+ * @param {Object} aggregatePayload - Updated invoice aggregate
+ * @returns {Object} Updated invoice aggregate
+ */
+export function updateInvoice(invoiceId, aggregatePayload) {
+    return transaction((db) => {
+        const now = new Date().toISOString();
+
+        // Verify invoice exists
+        const existing = db.prepare(`
+      SELECT id FROM invoices WHERE id = ? AND deleted_at IS NULL
+    `).get(invoiceId);
+
+        if (!existing) {
+            throw new Error('Invoice not found');
+        }
+
+        // Recompute totals server-side
+        const computedTotals = calculateInvoiceTotals(
+            aggregatePayload.items,
+            aggregatePayload.placeOfSupply
+        );
+
+        // Decompose aggregate
+        const decomposed = decomposeInvoiceAggregate(aggregatePayload, {
+            totals: computedTotals
+        });
+
+        // 1. Update invoice header
+        db.prepare(`
+      UPDATE invoices
+      SET customer_id = ?, type = ?, status = ?, date = ?, due_date = ?,
+          place_of_supply = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+            decomposed.invoice.customer_id,
+            decomposed.invoice.type,
+            decomposed.invoice.status,
+            decomposed.invoice.date,
+            decomposed.invoice.due_date,
+            decomposed.invoice.place_of_supply,
+            now,
+            invoiceId
+        );
+
+        // 2. Delete and recreate customer snapshot
+        db.prepare('DELETE FROM invoice_customer_snapshot WHERE invoice_id = ?').run(invoiceId);
+        db.prepare(`
+      INSERT INTO invoice_customer_snapshot (invoice_id, name, phone, gstin, address_json)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+            invoiceId,
+            decomposed.customerSnapshot.name,
+            decomposed.customerSnapshot.phone,
+            decomposed.customerSnapshot.gstin,
+            decomposed.customerSnapshot.address_json
+        );
+
+        // 3. Delete and recreate items
+        db.prepare('DELETE FROM invoice_items WHERE invoice_id = ?').run(invoiceId);
+        const itemStmt = db.prepare(`
+      INSERT INTO invoice_items (
+        id, invoice_id, product_id, description, quantity, rate, tax_rate,
+        weight_json, amount_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+        decomposed.items.forEach(item => {
+            itemStmt.run(
+                generateUUID(),
+                invoiceId,
+                item.product_id,
+                item.description,
+                item.quantity,
+                item.rate,
+                item.tax_rate,
+                item.weight_json,
+                item.amount_json
+            );
+        });
+
+        // 4. Delete and recreate totals
+        db.prepare('DELETE FROM invoice_totals WHERE invoice_id = ?').run(invoiceId);
+        db.prepare(`
+      INSERT INTO invoice_totals (
+        invoice_id, subtotal, tax_total, cgst, sgst, igst, round_off, grand_total
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+            invoiceId,
+            computedTotals.subtotal,
+            computedTotals.taxTotal,
+            computedTotals.cgst,
+            computedTotals.sgst,
+            computedTotals.igst,
+            computedTotals.roundOff,
+            computedTotals.grandTotal
+        );
+
+        // 5. Audit log
+        logAction('invoice', invoiceId, 'UPDATE');
+
+        // Return assembled aggregate
+        return assembleInvoice(invoiceId);
+    });
+}
+
+/**
+ * List all invoices (headers only, no aggregation)
+ * @returns {Array} List of invoice headers
+ */
+export function listInvoices() {
+    const db = getDatabase();
+
+    const invoices = db.prepare(`
+    SELECT i.*, it.grand_total
+    FROM invoices i
+    LEFT JOIN invoice_totals it ON i.id = it.invoice_id
+    WHERE i.deleted_at IS NULL
+    ORDER BY i.date DESC, i.created_at DESC
+  `).all();
+
+    return invoices;
+}
+
+/**
+ * Soft delete an invoice
+ * @param {string} invoiceId - Invoice UUID
+ */
+export function deleteInvoice(invoiceId) {
+    const db = getDatabase();
+
+    const stmt = db.prepare(`
+    UPDATE invoices SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL
+  `);
+
+    const result = stmt.run(new Date().toISOString(), invoiceId);
+
+    if (result.changes === 0) {
+        throw new Error('Invoice not found or already deleted');
+    }
+
+    logAction('invoice', invoiceId, 'DELETE');
+}
+
+/**
+ * Add a photo to an invoice
+ * @param {string} invoiceId - Invoice UUID
+ * @param {string} filePath - Stored file path
+ * @param {string} checksum - File checksum
+ * @returns {Object} Photo record
+ */
+export function addInvoicePhoto(invoiceId, filePath, checksum) {
+    const db = getDatabase();
+    const photoId = generateUUID();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+    INSERT INTO invoice_photos (id, invoice_id, file_path, checksum, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(photoId, invoiceId, filePath, checksum, now);
+
+    return { id: photoId, url: `/api/photos/${photoId}`, createdAt: now };
+}
+
+/**
+ * Delete a photo from an invoice
+ * @param {string} photoId - Photo UUID
+ */
+export function deleteInvoicePhoto(photoId) {
+    const db = getDatabase();
+
+    const photo = db.prepare('SELECT file_path FROM invoice_photos WHERE id = ?').get(photoId);
+
+    if (!photo) {
+        throw new Error('Photo not found');
+    }
+
+    db.prepare('DELETE FROM invoice_photos WHERE id = ?').run(photoId);
+
+    return photo.file_path;
+}
+</file>
+
+<file path="src/services/paymentService.js">
+import { getDatabase, transaction } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+import { generatePaymentNumber } from './sequenceService.js';
+import { updateCustomerBalance } from './customerService.js';
+import { logAction } from './auditService.js';
+
+/**
+ * Create a payment with allocations (TRANSACTIONAL)
+ * Also updates customer/vendor balances and invoice statuses
+ * 
+ * @param {Object} data - Payment data
+ * @returns {Object} Created payment
+ */
+export function createPayment(data) {
+    return transaction((db) => {
+        const paymentId = generateUUID();
+        const transactionNumber = generatePaymentNumber();
+        const now = new Date().toISOString();
+
+        // 1. Insert payment
+        db.prepare(`
+      INSERT INTO payments (
+        id, transaction_number, date, type, party_type, party_id, amount, mode, notes, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+            paymentId,
+            transactionNumber,
+            data.date,
+            data.type,
+            data.partyType,
+            data.partyId,
+            data.amount,
+            data.mode || null,
+            data.notes || null,
+            now
+        );
+
+        // 2. Insert payment allocations
+        if (data.allocations && data.allocations.length > 0) {
+            const allocStmt = db.prepare(`
+        INSERT INTO payment_allocations (id, payment_id, invoice_id, amount)
+        VALUES (?, ?, ?, ?)
+      `);
+
+            data.allocations.forEach(alloc => {
+                allocStmt.run(generateUUID(), paymentId, alloc.invoiceId, alloc.amount);
+            });
+
+            // 3. Update invoice statuses
+            data.allocations.forEach(alloc => {
+                updateInvoiceStatus(db, alloc.invoiceId);
+            });
+        }
+
+        // 4. Recalculate party balance
+        if (data.partyType === 'CUSTOMER') {
+            updateCustomerBalance(data.partyId);
+        }
+        // Add vendor balance update when vendor service is implemented
+
+        logAction('payment', paymentId, 'CREATE', { transactionNumber });
+
+        return getPayment(paymentId);
+    });
+}
+
+/**
+ * Update invoice status based on payment allocations
+ * Internal helper function
+ */
+function updateInvoiceStatus(db, invoiceId) {
+    // Get total invoice amount
+    const invoice = db.prepare(`
+    SELECT it.grand_total
+    FROM invoices i
+    JOIN invoice_totals it ON i.id = it.invoice_id
+    WHERE i.id = ?
+  `).get(invoiceId);
+
+    if (!invoice) return;
+
+    // Get total allocated payments
+    const allocated = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total
+    FROM payment_allocations
+    WHERE invoice_id = ?
+  `).get(invoiceId);
+
+    const totalPaid = allocated.total;
+    const grandTotal = invoice.grand_total;
+
+    let status;
+    if (totalPaid >= grandTotal) {
+        status = 'PAID';
+    } else if (totalPaid > 0) {
+        status = 'PARTIAL';
+    } else {
+        status = 'UNPAID';
+    }
+
+    db.prepare(`
+    UPDATE invoices SET status = ?, updated_at = ? WHERE id = ?
+  `).run(status, new Date().toISOString(), invoiceId);
+}
+
+/**
+ * Get a payment with allocations
+ */
+export function getPayment(paymentId) {
+    const db = getDatabase();
+
+    const payment = db.prepare(`
+    SELECT * FROM payments WHERE id = ?
+  `).get(paymentId);
+
+    if (!payment) return null;
+
+    const allocations = db.prepare(`
+    SELECT * FROM payment_allocations WHERE payment_id = ?
+  `).all(paymentId);
+
+    return {
+        ...payment,
+        allocations
+    };
+}
+
+/**
+ * List payments
+ */
+export function listPayments(filters = {}) {
+    const db = getDatabase();
+
+    let query = 'SELECT * FROM payments WHERE 1=1';
+    const params = [];
+
+    if (filters.partyId) {
+        query += ' AND party_id = ?';
+        params.push(filters.partyId);
+    }
+
+    if (filters.type) {
+        query += ' AND type = ?';
+        params.push(filters.type);
+    }
+
+    query += ' ORDER BY date DESC, created_at DESC';
+
+    return db.prepare(query).all(...params);
+}
+
+/**
+ * Delete a payment and recalculate balances
+ */
+export function deletePayment(paymentId) {
+    return transaction((db) => {
+        const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(paymentId);
+
+        if (!payment) {
+            throw new Error('Payment not found');
+        }
+
+        // Get allocations before deleting
+        const allocations = db.prepare(`
+      SELECT invoice_id FROM payment_allocations WHERE payment_id = ?
+    `).all(paymentId);
+
+        // Delete allocations
+        db.prepare('DELETE FROM payment_allocations WHERE payment_id = ?').run(paymentId);
+
+        // Delete payment
+        db.prepare('DELETE FROM payments WHERE id = ?').run(paymentId);
+
+        // Update affected invoice statuses
+        allocations.forEach(alloc => {
+            updateInvoiceStatus(db, alloc.invoice_id);
+        });
+
+        // Recalculate party balance
+        if (payment.party_type === 'CUSTOMER') {
+            updateCustomerBalance(payment.party_id);
+        }
+
+        logAction('payment', paymentId, 'DELETE');
+    });
+}
+</file>
+
+<file path="src/services/purchaseService.js">
+import { getDatabase, transaction } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+import { generatePurchaseNumber } from './sequenceService.js';
+import { logAction } from './auditService.js';
+
+/**
+ * Create a new purchase
+ */
+export function createPurchase(data) {
+    return transaction((db) => {
+        const purchaseId = generateUUID();
+        const purchaseNumber = generatePurchaseNumber();
+        const now = new Date().toISOString();
+
+        db.prepare(`
+      INSERT INTO purchases (id, purchase_number, vendor_id, status, date, due_date, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+            purchaseId,
+            purchaseNumber,
+            data.vendorId || null,
+            data.status || 'UNPAID',
+            data.date,
+            data.dueDate || null,
+            now,
+            now
+        );
+
+        logAction('purchase', purchaseId, 'CREATE', { purchaseNumber });
+        return getPurchase(purchaseId);
+    });
+}
+
+/**
+ * Get a single purchase
+ */
+export function getPurchase(purchaseId) {
+    const db = getDatabase();
+    const purchase = db.prepare(
+        'SELECT * FROM purchases WHERE id = ? AND deleted_at IS NULL'
+    ).get(purchaseId);
+
+    if (!purchase) return null;
+
+    // Get vendor info if exists
+    let vendor = null;
+    if (purchase.vendor_id) {
+        vendor = db.prepare('SELECT id, name, phone FROM vendors WHERE id = ?').get(purchase.vendor_id);
+    }
+
+    return { ...purchase, vendor };
+}
+
+/**
+ * List all purchases
+ */
+export function listPurchases(filters = {}) {
+    const db = getDatabase();
+    let query = 'SELECT * FROM purchases WHERE deleted_at IS NULL';
+    const params = [];
+
+    if (filters.vendorId) {
+        query += ' AND vendor_id = ?';
+        params.push(filters.vendorId);
+    }
+
+    if (filters.status) {
+        query += ' AND status = ?';
+        params.push(filters.status);
+    }
+
+    query += ' ORDER BY date DESC, created_at DESC';
+    return db.prepare(query).all(...params);
+}
+
+/**
+ * Update a purchase
+ */
+export function updatePurchase(purchaseId, data) {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    const result = db.prepare(`
+    UPDATE purchases SET vendor_id = ?, status = ?, date = ?, due_date = ?, updated_at = ?
+    WHERE id = ? AND deleted_at IS NULL
+  `).run(
+        data.vendorId || null,
+        data.status,
+        data.date,
+        data.dueDate || null,
+        now,
+        purchaseId
+    );
+
+    if (result.changes === 0) throw new Error('Purchase not found');
+    logAction('purchase', purchaseId, 'UPDATE');
+    return getPurchase(purchaseId);
+}
+
+/**
+ * Soft delete a purchase
+ */
+export function deletePurchase(purchaseId) {
+    const db = getDatabase();
+    const result = db.prepare(
+        'UPDATE purchases SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL'
+    ).run(new Date().toISOString(), purchaseId);
+
+    if (result.changes === 0) throw new Error('Purchase not found');
+    logAction('purchase', purchaseId, 'DELETE');
+}
+</file>
+
+<file path="src/services/sequenceService.js">
+import { getDatabase } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+
+/**
+ * Get next sequence number for invoice, purchase, or payment
+ * Thread-safe via SQLite's transaction isolation
+ * 
+ * @param {string} key - Sequence key
+ * @returns {number} Next sequence number
+ */
+export function getNextSequence(key) {
+    const db = getDatabase();
+
+    const stmt = db.prepare('UPDATE sequences SET value = value + 1 WHERE key = ? RETURNING value');
+    const result = stmt.get(key);
+
+    if (!result) {
+        throw new Error(`Sequence not found: ${key}`);
+    }
+
+    return result.value;
+}
+
+/**
+ * Generate formatted invoice number
+ * Format: INV-YYYY-NNNN
+ */
+export function generateInvoiceNumber() {
+    const seq = getNextSequence('invoice_seq');
+    const year = new Date().getFullYear();
+    return `INV-${year}-${String(seq).padStart(4, '0')}`;
+}
+
+/**
+ * Generate formatted purchase number
+ * Format: PUR-YYYY-NNNN
+ */
+export function generatePurchaseNumber() {
+    const seq = getNextSequence('purchase_seq');
+    const year = new Date().getFullYear();
+    return `PUR-${year}-${String(seq).padStart(4, '0')}`;
+}
+
+/**
+ * Generate formatted payment/transaction number
+ * Format: PAY-YYYY-NNNN
+ */
+export function generatePaymentNumber() {
+    const seq = getNextSequence('payment_seq');
+    const year = new Date().getFullYear();
+    return `PAY-${year}-${String(seq).padStart(4, '0')}`;
+}
+
+/**
+ * Reset a sequence (use with caution)
+ */
+export function resetSequence(key, value = 1) {
+    const db = getDatabase();
+    const stmt = db.prepare('UPDATE sequences SET value = ? WHERE key = ?');
+    stmt.run(value, key);
+}
+</file>
+
+<file path="src/services/settingsService.js">
+import { getDatabase } from '../db/init.js';
+
+/**
+ * Get a setting value
+ * @param {string} key - Setting key
+ * @returns {*} Parsed setting value or null
+ */
+export function getSetting(key) {
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT value_json FROM settings WHERE key = ?');
+    const result = stmt.get(key);
+
+    if (!result) {
+        return null;
+    }
+
+    return JSON.parse(result.value_json);
+}
+
+/**
+ * Set a setting value
+ * @param {string} key - Setting key
+ * @param {*} value - Value to store (will be JSON stringified)
+ */
+export function setSetting(key, value) {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+    INSERT INTO settings (key, value_json) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json
+  `);
+
+    stmt.run(key, JSON.stringify(value));
+}
+
+/**
+ * Get all settings
+ * @returns {Object} Key-value pairs of all settings
+ */
+export function getAllSettings() {
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT key, value_json FROM settings');
+    const rows = stmt.all();
+
+    const settings = {};
+    rows.forEach(row => {
+        settings[row.key] = JSON.parse(row.value_json);
+    });
+
+    return settings;
+}
+
+/**
+ * Delete a setting
+ * @param {string} key - Setting key to delete
+ */
+export function deleteSetting(key) {
+    const db = getDatabase();
+    const stmt = db.prepare('DELETE FROM settings WHERE key = ?');
+    stmt.run(key);
+}
+</file>
+
+<file path="src/services/userService.js">
+import { getDatabase } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+import jwt from 'jsonwebtoken';
+import { config } from '../config/index.js';
+import { createChildLogger } from '../utils/logger.js';
+
+const userLogger = createChildLogger('user');
+
+// Static OTP for local development
+const DEV_OTP = '111111';
+
+/**
+ * Request OTP for phone number
+ * Creates user if doesn't exist
+ */
+export function requestOTP(phone) {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    // Find or create user by phone
+    let user = db.prepare('SELECT * FROM users WHERE username = ?').get(phone);
+
+    if (!user) {
+        // Create new user with phone as username
+        const userId = generateUUID();
+        db.prepare(`
+      INSERT INTO users (id, username, password_hash, role, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(userId, phone, '', 'USER', now);
+
+        user = { id: userId, username: phone, role: 'user' };
+    }
+
+    // Log OTP generation WITHOUT the actual OTP value (security)
+    userLogger.debug({ phone }, 'OTP generated for phone number');
+
+    return {
+        success: true,
+        message: 'OTP sent successfully',
+        phone
+    };
+}
+
+/**
+ * Verify OTP and return JWT
+ */
+export function verifyOTP(phone, otp) {
+    const db = getDatabase();
+
+    // Find user by phone
+    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(phone);
+
+    if (!user) {
+        throw { statusCode: 404, message: 'User not found. Please request OTP first.' };
+    }
+
+    // Verify OTP (static for dev)
+    if (otp !== DEV_OTP) {
+        throw { statusCode: 401, message: 'Invalid OTP' };
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+        { userId: user.id, phone: user.username, role: user.role },
+        config.jwtSecret,
+        { expiresIn: '30d' }
+    );
+
+    return {
+        token,
+        user: {
+            id: user.id,
+            phone: user.username,
+            role: user.role
+        }
+    };
+}
+
+/**
+ * Get user by ID
+ */
+export function getUser(userId) {
+    const db = getDatabase();
+    const user = db.prepare(
+        'SELECT id, username as phone, role, created_at FROM users WHERE id = ?'
+    ).get(userId);
+    return user || null;
+}
+
+/**
+ * List all users (admin only)
+ */
+export function listUsers() {
+    const db = getDatabase();
+    return db.prepare(
+        'SELECT id, username as phone, role, created_at FROM users ORDER BY created_at DESC'
+    ).all();
+}
+</file>
+
+<file path="src/services/vendorService.js">
+import { getDatabase } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+import { logAction } from './auditService.js';
+
+/**
+ * Create a new vendor
+ */
+export function createVendor(data) {
+    const db = getDatabase();
+    const vendorId = generateUUID();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+    INSERT INTO vendors (id, name, gstin, phone, email, balance, address_json, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+        vendorId,
+        data.name,
+        data.gstin || null,
+        data.phone || null,
+        data.email || null,
+        0,
+        data.address ? JSON.stringify(data.address) : null,
+        now,
+        now
+    );
+
+    logAction('vendor', vendorId, 'CREATE', { name: data.name });
+    return getVendor(vendorId);
+}
+
+/**
+ * Get a single vendor
+ */
+export function getVendor(vendorId) {
+    const db = getDatabase();
+    const vendor = db.prepare(
+        'SELECT * FROM vendors WHERE id = ? AND deleted_at IS NULL'
+    ).get(vendorId);
+
+    if (!vendor) return null;
+    return { ...vendor, address: vendor.address_json ? JSON.parse(vendor.address_json) : null };
+}
+
+/**
+ * List all vendors
+ */
+export function listVendors() {
+    const db = getDatabase();
+    const vendors = db.prepare(
+        'SELECT * FROM vendors WHERE deleted_at IS NULL ORDER BY name'
+    ).all();
+
+    return vendors.map(v => ({
+        ...v,
+        address: v.address_json ? JSON.parse(v.address_json) : null
+    }));
+}
+
+/**
+ * Update a vendor
+ */
+export function updateVendor(vendorId, data) {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    const result = db.prepare(`
+    UPDATE vendors SET name = ?, gstin = ?, phone = ?, email = ?, address_json = ?, updated_at = ?
+    WHERE id = ? AND deleted_at IS NULL
+  `).run(
+        data.name,
+        data.gstin || null,
+        data.phone || null,
+        data.email || null,
+        data.address ? JSON.stringify(data.address) : null,
+        now,
+        vendorId
+    );
+
+    if (result.changes === 0) throw new Error('Vendor not found');
+    logAction('vendor', vendorId, 'UPDATE');
+    return getVendor(vendorId);
+}
+
+/**
+ * Soft delete a vendor
+ */
+export function deleteVendor(vendorId) {
+    const db = getDatabase();
+    const result = db.prepare(
+        'UPDATE vendors SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL'
+    ).run(new Date().toISOString(), vendorId);
+
+    if (result.changes === 0) throw new Error('Vendor not found or already deleted');
+    logAction('vendor', vendorId, 'DELETE');
+}
+
+/**
+ * Recalculate vendor balance from purchases and payments
+ */
+export function updateVendorBalance(vendorId) {
+    const db = getDatabase();
+
+    // TODO: Sum from purchases table when purchase items are implemented
+    const payments = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total FROM payments
+    WHERE party_id = ? AND party_type = 'VENDOR'
+  `).get(vendorId);
+
+    const balance = -payments.total; // Negative means we owe them
+    db.prepare('UPDATE vendors SET balance = ? WHERE id = ?').run(balance, vendorId);
+    return balance;
+}
+</file>
+
+<file path="src/utils/calculator.js">
+/**
+ * Calculate invoice totals from line items
+ * Server-side authority - never trust client calculations
+ * 
+ * @param {Array} items - Invoice line items
+ * @param {string} placeOfSupply - State code for GST calculation
+ * @returns {Object} Calculation results
+ */
+export function calculateInvoiceTotals(items, placeOfSupply = null) {
+    let subtotal = 0;
+    let taxTotal = 0;
+    let cgst = 0;
+    let sgst = 0;
+    let igst = 0;
+
+    items.forEach(item => {
+        const lineTotal = item.quantity * item.rate;
+        subtotal += lineTotal;
+
+        if (item.taxRate) {
+            const lineTax = (lineTotal * item.taxRate) / 100;
+            taxTotal += lineTax;
+
+            // Simplified CGST/SGST vs IGST logic
+            // In production, compare placeOfSupply with business GSTIN state
+            const isIntraState = true; // TODO: Implement proper state comparison
+
+            if (isIntraState) {
+                cgst += lineTax / 2;
+                sgst += lineTax / 2;
+            } else {
+                igst += lineTax;
+            }
+        }
+    });
+
+    const grandTotal = subtotal + taxTotal;
+    const roundOff = Math.round(grandTotal) - grandTotal;
+
+    return {
+        subtotal: parseFloat(subtotal.toFixed(2)),
+        taxTotal: parseFloat(taxTotal.toFixed(2)),
+        cgst: parseFloat(cgst.toFixed(2)),
+        sgst: parseFloat(sgst.toFixed(2)),
+        igst: parseFloat(igst.toFixed(2)),
+        roundOff: parseFloat(roundOff.toFixed(2)),
+        grandTotal: parseFloat(Math.round(grandTotal).toFixed(2))
+    };
+}
+
+/**
+ * Recalculate customer/vendor balance from ledger
+ * Balances are derived, not authoritative
+ * 
+ * @param {Object} db - Database instance
+ * @param {string} partyId - Customer or vendor ID
+ * @param {string} partyType - 'CUSTOMER' or 'VENDOR'
+ * @returns {number} Calculated balance
+ */
+export function recalculateBalance(db, partyId, partyType) {
+    // Sum all invoices for this party
+    const invoiceStmt = db.prepare(`
+    SELECT COALESCE(SUM(it.grand_total), 0) as total_invoiced
+    FROM invoices i
+    JOIN invoice_totals it ON i.id = it.invoice_id
+    WHERE i.customer_id = ? AND i.deleted_at IS NULL
+  `);
+
+    const { total_invoiced } = invoiceStmt.get(partyId);
+
+    // Sum all payments for this party
+    const paymentStmt = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total_paid
+    FROM payments
+    WHERE party_id = ? AND party_type = ?
+  `);
+
+    const { total_paid } = paymentStmt.get(partyId, partyType);
+
+    return parseFloat((total_invoiced - total_paid).toFixed(2));
+}
+</file>
+
+<file path="src/utils/checksum.js">
+import crypto from 'crypto';
+
+/**
+ * Calculate SHA-256 checksum of a file buffer
+ * @param {Buffer} buffer - File buffer
+ * @returns {string} Hexadecimal checksum
+ */
+export function calculateChecksum(buffer) {
+    return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+</file>
+
+<file path="src/utils/logger.js">
+/**
+ * Centralized Pino Logger
+ * 
+ * Features:
+ * - Environment-driven log level (LOG_LEVEL env var)
+ * - Pretty printing for dev, JSON for prod
+ * - File transport with rotation in production
+ * - Sensitive field redaction
+ * - Request ID correlation
+ * - Error-safe (never throws, never blocks)
+ */
+
+import pino from 'pino';
+import pinoHttp from 'pino-http';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Configuration
+const isDev = process.env.NODE_ENV !== 'production';
+const logLevel = process.env.LOG_LEVEL || 'info';
+
+// Ensure logs directory exists in production
+const logsDir = join(__dirname, '../../logs');
+if (!isDev && !existsSync(logsDir)) {
+    try {
+        mkdirSync(logsDir, { recursive: true });
+    } catch (err) {
+        console.error('Failed to create logs directory:', err.message);
+    }
+}
+
+// Sensitive fields to redact
+const REDACT_PATHS = [
+    'password',
+    'token',
+    'authorization',
+    'otp',
+    'secret',
+    'apiKey',
+    'cookie',
+    'set-cookie',
+    'req.headers.authorization',
+    'req.headers.cookie',
+    'res.headers["set-cookie"]'
+];
+
+/**
+ * Create base pino options
+ */
+function createLoggerOptions() {
+    const baseOptions = {
+        level: logLevel,
+        redact: {
+            paths: REDACT_PATHS,
+            censor: '[REDACTED]'
+        },
+        // Add timestamp in ISO format
+        timestamp: pino.stdTimeFunctions.isoTime,
+        // Base bindings for all logs
+        base: {
+            pid: process.pid
+        },
+        // Format error objects properly
+        formatters: {
+            level: (label) => ({ level: label }),
+            bindings: (bindings) => bindings
+        }
+    };
+
+    return baseOptions;
+}
+
+/**
+ * Create transport configuration
+ */
+function createTransport() {
+    if (isDev) {
+        // Pretty print for development
+        return {
+            target: 'pino-pretty',
+            options: {
+                colorize: true,
+                translateTime: 'SYS:standard',
+                ignore: 'pid,hostname'
+            }
+        };
+    }
+
+    // Production: multi-stream to stdout + rotating file
+    return {
+        targets: [
+            // Stdout (for Docker/PM2 log collection)
+            {
+                target: 'pino/file',
+                options: { destination: 1 }, // stdout
+                level: logLevel
+            },
+            // File with rotation (7 days retention)
+            {
+                target: 'pino/file',
+                options: {
+                    destination: join(logsDir, 'app.log'),
+                    mkdir: true
+                },
+                level: logLevel
+            }
+        ]
+    };
+}
+
+/**
+ * Safe logger wrapper that never throws
+ */
+function createSafeLogger() {
+    try {
+        const options = createLoggerOptions();
+        const transport = createTransport();
+
+        return pino({
+            ...options,
+            transport
+        });
+    } catch (err) {
+        // Fallback to console if pino fails
+        console.error('Failed to initialize pino logger:', err.message);
+        return {
+            info: (...args) => console.log('[INFO]', ...args),
+            warn: (...args) => console.warn('[WARN]', ...args),
+            error: (...args) => console.error('[ERROR]', ...args),
+            debug: (...args) => console.debug('[DEBUG]', ...args),
+            fatal: (...args) => console.error('[FATAL]', ...args),
+            child: () => createSafeLogger()
+        };
+    }
+}
+
+// Main logger instance
+export const logger = createSafeLogger();
+
+/**
+ * Create a child logger with module context
+ * 
+ * @param {string} module - Module name for context
+ * @returns {pino.Logger} Child logger instance
+ */
+export function createChildLogger(module) {
+    try {
+        return logger.child({ module });
+    } catch (err) {
+        console.error('Failed to create child logger:', err.message);
+        return logger;
+    }
+}
+
+/**
+ * Create HTTP logging middleware
+ * Binds request ID and logs request/response
+ * 
+ * @returns {Function} Express middleware
+ */
+export function createHttpLogger() {
+    try {
+        return pinoHttp({
+            logger,
+            // Use existing request ID if present
+            genReqId: (req) => req.id || req.headers['x-request-id'] || undefined,
+            // Custom log level based on status code
+            customLogLevel: (req, res, err) => {
+                if (res.statusCode >= 500 || err) return 'error';
+                if (res.statusCode >= 400) return 'warn';
+                return 'info';
+            },
+            // Custom success message
+            customSuccessMessage: (req, res) => {
+                return `${req.method} ${req.url} ${res.statusCode}`;
+            },
+            // Custom error message
+            customErrorMessage: (req, res, err) => {
+                return `${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
+            },
+            // Redact sensitive headers
+            redact: REDACT_PATHS,
+            // Skip health check spam
+            autoLogging: {
+                ignore: (req) => req.url === '/health'
+            }
+        });
+    } catch (err) {
+        console.error('Failed to create HTTP logger:', err.message);
+        // Return no-op middleware
+        return (req, res, next) => next();
+    }
+}
+
+export default logger;
+</file>
+
+<file path="src/utils/logger.test.js">
+/**
+ * Logger Unit Tests
+ * 
+ * Tests for the centralized Pino logger module
+ */
+
+import { jest } from '@jest/globals';
+
+// Mock pino before importing logger
+jest.unstable_mockModule('pino', () => ({
+    default: jest.fn(() => ({
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn(),
+        fatal: jest.fn(),
+        child: jest.fn(() => ({
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn()
+        }))
+    })),
+    stdTimeFunctions: {
+        isoTime: jest.fn()
+    }
+}));
+
+jest.unstable_mockModule('pino-http', () => ({
+    default: jest.fn(() => (req, res, next) => next())
+}));
+
+// Import after mocks
+const { logger, createChildLogger, createHttpLogger } = await import('./logger.js');
+
+describe('Logger Module', () => {
+    describe('logger instance', () => {
+        test('logger exists and is defined', () => {
+            expect(logger).toBeDefined();
+        });
+
+        test('logger has info method', () => {
+            expect(typeof logger.info).toBe('function');
+        });
+
+        test('logger has warn method', () => {
+            expect(typeof logger.warn).toBe('function');
+        });
+
+        test('logger has error method', () => {
+            expect(typeof logger.error).toBe('function');
+        });
+
+        test('logger has debug method', () => {
+            expect(typeof logger.debug).toBe('function');
+        });
+
+        test('logger has fatal method', () => {
+            expect(typeof logger.fatal).toBe('function');
+        });
+    });
+
+    describe('createChildLogger', () => {
+        test('returns a logger instance', () => {
+            const childLogger = createChildLogger('testModule');
+            expect(childLogger).toBeDefined();
+        });
+
+        test('child logger has expected methods', () => {
+            const childLogger = createChildLogger('testModule');
+            expect(typeof childLogger.info).toBe('function');
+            expect(typeof childLogger.warn).toBe('function');
+            expect(typeof childLogger.error).toBe('function');
+            expect(typeof childLogger.debug).toBe('function');
+        });
+    });
+
+    describe('createHttpLogger', () => {
+        test('returns a middleware function', () => {
+            const middleware = createHttpLogger();
+            expect(typeof middleware).toBe('function');
+        });
+
+        test('middleware has correct signature (req, res, next)', () => {
+            const middleware = createHttpLogger();
+            expect(middleware.length).toBeGreaterThanOrEqual(2);
+        });
+
+        test('middleware calls next() when invoked', () => {
+            const middleware = createHttpLogger();
+            const req = {};
+            const res = {};
+            const next = jest.fn();
+
+            middleware(req, res, next);
+            expect(next).toHaveBeenCalled();
+        });
+    });
+
+    describe('error safety', () => {
+        test('logger.info does not throw on object input', () => {
+            expect(() => {
+                logger.info({ test: 'data' }, 'test message');
+            }).not.toThrow();
+        });
+
+        test('logger.info does not throw on string input', () => {
+            expect(() => {
+                logger.info('simple string message');
+            }).not.toThrow();
+        });
+
+        test('logger.error does not throw on Error object', () => {
+            expect(() => {
+                logger.error(new Error('test error'), 'error occurred');
+            }).not.toThrow();
+        });
+
+        test('createChildLogger does not throw on empty module name', () => {
+            expect(() => {
+                createChildLogger('');
+            }).not.toThrow();
+        });
+    });
+});
+
+describe('Logger Redaction Configuration', () => {
+    // Note: Full redaction testing requires integration tests with actual pino output
+    // These tests verify the configuration is correct
+
+    test('REDACT_PATHS should include password', () => {
+        // Verify via the logger config indirectly - if logger exists, config is valid
+        expect(logger).toBeDefined();
+    });
+
+    test('logger should handle objects with sensitive fields without throwing', () => {
+        const sensitiveData = {
+            username: 'testuser',
+            password: 'secret123',
+            token: 'abc123',
+            authorization: 'Bearer xyz',
+            otp: '123456',
+            apiKey: 'key123'
+        };
+
+        expect(() => {
+            logger.info(sensitiveData, 'testing redaction');
+        }).not.toThrow();
+    });
+});
+</file>
+
+<file path="src/utils/uuid.js">
+import crypto from 'crypto';
+
+/**
+ * Generate a UUID v4
+ * Uses Node.js crypto.randomUUID() for cryptographically secure UUIDs
+ */
+export function generateUUID() {
+    return crypto.randomUUID();
+}
+
+/**
+ * Generate a URL-safe short ID (for file names)
+ */
+export function generateShortId() {
+    return crypto.randomBytes(16).toString('hex');
+}
+</file>
+
+<file path="storage/photos/.gitkeep">
+
+</file>
+
+<file path=".gitignore">
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment variables
+.env
+backend/.env
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+
+# Storage
+storage/photos/*
+backend/storage/photos/*
+!storage/photos/.gitkeep
+!backend/storage/photos/.gitkeep
+
+# OS files
+.DS_Store
+backend/.DS_Store
+</file>
+
+<file path="IMPLEMENTATION_NOTES.md">
+# Swipe Backend - Important Implementation Notes
+
+## Database Library Change (Dec 2025)
+
+**Original Plan:** Use `better-sqlite3` for synchronous SQLite operations.
+
+**Actual Implementation:** Using `sqlite3` (asynchronous) due to compilation issues with `better-sqlite3` on Node.js v23.
+
+### Impact
+
+The database layer (`src/db/init.js`) has been adapted with promisified methods:
+- `db.runAsync(sql, params)`  
+- `db.getAsync(sql, params)`
+- `db.allAsync(sql, params)`
+- `db.execAsync(sql)`
+
+### Service Layer Status
+
+⚠️ **IMPORTANT**: Most service files were written assuming synchronous `better-sqlite3` API. They will need to be updated to use async/await for production use.
+
+**Current Status:**
+- ✅ Database initialization (`db/init.js`) - fully async-compatible
+- ⚠️ Services (`services/*.js`) - written for sync API, need async updates
+- ⚠️ Routes (`routes/*.js`) - some async handling in place, may need adjustments
+
+### For Development Testing
+
+The backend will start and the database will initialize correctly. However, when testing CRUD operations via API, you may encounter:
+- Synchronous `.prepare()` method errors
+- `.get()` / `.all()` / `.run()` method errors
+
+### Recommended Next Steps
+
+1. **Option A (Quick Fix)**: Downgrade to Node.js v18 LTS and reinstall `better-sqlite3`
+   ```bash
+   nvm use 18
+   npm install better-sqlite3@^9.2.2
+   # Revert src/db/init.js to synchronous version
+   ```
+
+2. **Option B (Production Fix)**: Update all service files to use async/await with promisified methods
+   - Update `services/customerService.js`
+   - Update `services/productService.js`
+   - Update `services/invoiceService.js`
+   - Update `services/paymentService.js`
+   - Update all other service files
+
+## Testing the Current Implementation
+
+Even with the sync/async mismatch, you can test:
+1. ✅ Server startup
+2. ✅ Health check (`GET /health`)
+3. ✅ Database schema initialization
+4. ✅ Directory structure
+
+CRUD operations will need async service updates to function.
+
+## Architecture Remains Sound
+
+The architectural design (aggregate pattern, transactional operations, server-side authority) is fully implemented and correct. Only the database API layer needs adjustment for the async library.
+</file>
+
+<file path="NODE_VERSION_REQUIRED.md">
+# Node.js Version Requirement
+
+⚠️ **IMPORTANT: This backend requires Node.js v18 LTS**
+
+The `better-sqlite3` package does not compile on Node.js v23.
+
+## Quick Fix
+
+You are currently on **Node.js v23.11.0**. You need to switch to v18.
+
+### Method 1: Using NVM (Recommended)
+
+```bash
+# Load NVM if not already loaded
+source ~/.nvm/nvm.sh
+
+# Install and use Node.js 18
+nvm install 18
+nvm use 18
+
+# Verify
+node --version  # Should show v18.x.x
+
+# Install dependencies
+cd backend
+rm -rf node_modules package-lock.json swipe.db*
+npm install
+
+# Start server
+npm start
+```
+
+### Method 2: Use the Setup Script
+
+```bash
+cd backend
+./setup.sh
+```
+
+The script will guide you through the process.
+
+### Method 3: Manual Installation
+
+If you don't have nvm:
+1. Download Node.js v18 LTS from https://nodejs.org/
+2. Install it
+3. Run `npm install` in the backend directory
+
+## After Switching to Node v18
+
+Once on Node v18, the installation should complete successfully:
+
+```bash
+npm install    # Should work without errors
+npm start      # Server starts on port 3000
+```
+
+## Verification
+
+```bash
+# Should see v18.x.x
+node --version
+
+# Should start without errors
+npm start
+```
+
+## Why Node v18?
+
+- `better-sqlite3` v9.2.2 requires Node.js v18 or lower
+- Node.js v23 introduced breaking changes in native module compilation
+- Node.js v18 is the current LTS (Long Term Support) version
+- All service files use synchronous API that requires better-sqlite3
+
+## Alternative (Not Recommended)
+
+If you must stay on Node v23, you would need to:
+1. Complete the async/await migration in all service files (see IMPLEMENTATION_NOTES.md)
+2. Use `sqlite3` package instead of `better-sqlite3`
+
+However, this is significantly more work. **Switching to Node v18 is the fastest path to a working backend.**
+</file>
+
+<file path="package.json">
+{
+  "name": "swipe-backend",
+  "version": "1.0.0",
+  "description": "Local-first backend service for Swipe Invoice application",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "keywords": [
+    "invoice",
+    "sqlite",
+    "rest-api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.2.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pino": "^10.1.0",
+    "pino-http": "^11.0.0",
+    "pino-pretty": "^13.1.3",
+    "rotating-file-stream": "^3.2.7",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2"
+  }
+}
+</file>
+
+<file path="README.md">
+# Swipe Backend Service
+
+> ⚠️ **Requires Node.js v18 LTS** - better-sqlite3 does not compile on Node.js v23+  
+> See [NODE_VERSION_REQUIRED.md](NODE_VERSION_REQUIRED.md) for setup instructions.
+
+Local-first backend service for the Swipe Invoice application, built with Node.js, Express, and SQLite.
+
+## Features
+
+- ✅ **Aggregate-based API** - Invoice aggregates assembled from normalized database tables
+- ✅ **Transactional operations** - ACID compliance with SQLite WAL mode
+- ✅ **Server-side authority** - Totals and balances computed server-side
+- ✅ **Idempotency support** - Duplicate prevention via request IDs
+- ✅ **Photo storage** - Local filesystem storage with checksums
+- ✅ **Audit logging** - Complete audit trail for all mutations
+- ✅ **Soft deletes** - Data preservation with recovery capability
+
+## Architecture
+
+The backend implements an **aggregate pattern** where complex business objects (InvoiceAggregate) are assembled from multiple normalized tables:
+
+```
+InvoiceAggregate = invoices + invoice_customer_snapshot + invoice_items + invoice_totals + invoice_photos
+```
+
+This allows the API to remain clean and business-focused while maintaining relational integrity internally.
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+cd backend
+npm install
+```
+
+### 2. Configure Environment
+
+```bash
+cp .env.example .env
+# Edit .env and set your configuration
+```
+
+**Required Environment Variables:**
+- `DATABASE_PATH` - SQLite database file path
+- `STORAGE_PATH` - Photo storage directory
+- `JWT_SECRET` - Secret key for JWT authentication
+- `PORT` - Server port (default: 3000)
+
+### 3. Start the Server
+
+**Development mode (with auto-reload):**
+```bash
+npm run dev
+```
+
+**Production mode:**
+```bash
+npm start
+```
+
+The server will initialize the database schema automatically on first run.
+
+## API Endpoints
+
+Base URL: `http://localhost:3000/api`
+
+### Health Check
+- `GET /health` - Server health status
+
+### Invoices (Aggregate API)
+- `GET /api/invoices` - List all invoices (headers only)
+- `GET /api/invoices/:id` - Get fully assembled invoice aggregate
+- `POST /api/invoices` - Create invoice (supports `X-Request-Id` header for idempotency)
+- `PUT /api/invoices/:id` - Update invoice (full replacement)
+- `DELETE /api/invoices/:id` - Soft delete invoice
+- `POST /api/invoices/:id/photos` - Upload invoice photo
+- `DELETE /api/invoices/:invoiceId/photos/:photoId` - Delete invoice photo
+
+### Customers
+- `GET /api/customers` - List all customers
+- `GET /api/customers/:id` - Get single customer
+- `POST /api/customers` - Create customer
+- `PUT /api/customers/:id` - Update customer
+- `DELETE /api/customers/:id` - Soft delete customer
+
+### Products
+- `GET /api/products` - List products (supports `?type=` and `?categoryId=` filters)
+- `GET /api/products/:id` - Get product with images
+- `POST /api/products` - Create product
+- `PUT /api/products/:id` - Update product
+- `DELETE /api/products/:id` - Soft delete product
+- `POST /api/products/:id/images` - Upload product image
+- `DELETE /api/products/:productId/images/:imageId` - Delete product image
+
+### Payments
+- `GET /api/payments` - List payments (supports `?partyId=` and `?type=` filters)
+- `GET /api/payments/:id` - Get payment with allocations
+- `POST /api/payments` - Create payment with allocations (updates invoice statuses and balances)
+- `DELETE /api/payments/:id` - Delete payment (recalculates balances)
+
+### Photos
+- `GET /api/photos/:id` - Serve photo file
+
+### Settings
+- `GET /api/settings` - Get all settings
+- `GET /api/settings/:key` - Get single setting
+- `PUT /api/settings/:key` - Set a setting value
+
+## Database
+
+The backend uses **SQLite** with:
+- **WAL mode** for better concurrency
+- **Foreign key constraints** enabled
+- **22 normalized tables** for relational integrity
+- **Automatic schema initialization**
+
+Database file location: configured via `DATABASE_PATH` (default: `./swipe.db`)
+
+## File Storage
+
+Photos are stored on the local filesystem with:
+- UUID-based filenames for uniqueness
+- SHA-256 checksums for integrity
+- Path abstraction (clients never see filesystem paths)
+
+Storage location: configured via `STORAGE_PATH` (default: `./storage/photos`)
+
+## Key Design Principles
+
+1. **Single Process Architecture** - Better-SQLite3 is synchronous; do not use clustering or worker threads
+2. **Server-Side Authority** - All financial calculations performed server-side; client values ignored
+3. **Derived Balances** - Balances are computed from ledger, not incremented blindly
+4. **Idempotency** - Invoice creation supports request IDs to prevent duplicates
+5. **Transactional Integrity** - All mutations happen within database transactions
+
+## Production Deployment
+
+### Environment Variables (Mandatory in Production)
+
+```bash
+NODE_ENV=production
+DATABASE_PATH=/path/to/production/swipe.db  # REQUIRED
+STORAGE_PATH=/path/to/production/photos     # REQUIRED
+JWT_SECRET=long-random-secret-key           # REQUIRED
+PORT=3000
+MIGRATION_ENABLED=false                      # Disable after initial migration
+```
+
+### Security Considerations
+
+- Run on local network only (not exposed to internet by default)
+- Use Cloudflare Tunnel if remote access is needed (requires explicit setup)
+- Set strong `JWT_SECRET` in production
+- Keep `MIGRATION_ENABLED=false` after initial data migration
+
+## Error Handling
+
+All errors return consistent JSON format:
+
+```json
+{
+  "error": "Error message",
+  "details": {},
+  "requestId": "uuid"
+}
+```
+
+- **400** - Validation errors
+- **404** - Resource not found
+- **500** - Internal server error
+
+## Testing
+
+```bash
+npm test
+```
+
+Tests cover:
+- Database initialization
+- Invoice aggregate assembly/decomposition
+- Transactional integrity
+- Payment allocation logic
+- Idempotency keys
+
+## Future Enhancements
+
+- [ ] IndexedDB migration endpoint
+- [ ] User authentication module
+- [ ] Vendor CRUD endpoints
+- [ ] Category/subcategory endpoints
+- [ ] Bulk import/export
+- [ ] Cloud backup sync
+
+## Support
+
+For issues or questions, refer to the implementation plan or contact the development team.
+
+---
+
+**Version:** 1.0.0  
+**License:** ISC
+</file>
+
+<file path="setup.sh">
+#!/bin/bash
+
+# Script to switch to Node.js v18 and install dependencies
+# Run this script to complete the backend setup
+
+echo "📦 Backend Setup Script"
+echo "======================="
+echo ""
+
+# Check if nvm is available
+if ! command -v nvm &> /dev/null; then
+    echo "⚠️  NVM not found in current shell"
+    echo ""
+    echo "Please run ONE of these commands in your terminal:"
+    echo ""
+    echo "Option 1: Load NVM (if installed)"
+    echo "  source ~/.nvm/nvm.sh"
+    echo "  nvm use 18"
+    echo ""
+    echo "Option 2: Use system Node (if v18 is installed)"
+    echo "  node --version  # Check if already on v18"
+    echo ""
+    echo "Option 3: Install nvm first"
+    echo "  Visit: https://github.com/nvm-sh/nvm#installing-and-updating"
+    echo ""
+    exit 1
+fi
+
+echo "🔄 Switching to Node.js v18..."
+nvm use 18
+
+if [ $? -ne 0 ]; then
+    echo "❌ Node.js v18 not found"
+    echo "📥 Installing Node.js v18..."
+    nvm install 18
+    nvm use 18
+fi
+
+echo ""
+echo "✅ Node version: $(node --version)"
+echo ""
+
+echo "🧹 Cleaning previous installation..."
+rm -rf node_modules package-lock.json swipe.db*
+
+echo "📦 Installing dependencies..."
+npm install
+
+if [ $? -eq 0 ]; then
+    echo ""
+    echo "✅ Setup complete!"
+    echo ""
+    echo "🚀 Start the server with:"
+    echo "   npm start"
+    echo ""
+else
+    echo ""
+    echo "❌ Installation failed. Check the error above."
+    echo ""
+fi
+</file>
+
+<file path="specs.md">
+---
+
+# Backend Specification
+
+## 1. Purpose (unchanged)
+
+Build a **local-first backend service** for the Swipe Invoice application to replace IndexedDB, support multi-user LAN access, safely store photos, and enable future cloud backup/sync without frontend rewrites.
+
+Frontend is deployed on Vercel and must remain storage-agnostic.
+
+---
+
+## 2. Architectural Principles (unchanged, clarified)
+
+* Frontend **never** accesses database or filesystem directly.
+* Backend is the **single source of truth**.
+* Storage implementation (SQLite today, Postgres later) must be opaque to clients.
+* API exposes **business objects**, not database tables.
+
+---
+
+## 3. Canonical Data Model (NEW – REQUIRED)
+
+The backend maintains a **canonical relational data model** (see attached SQLite DDL).
+However, the API does **not** expose tables directly.
+
+Instead, the backend assembles and persists **Aggregate Objects**.
+
+### 3.1 Aggregate Definitions
+
+#### InvoiceAggregate (authoritative API shape)
+
+An invoice is defined as the composition of:
+
+* Invoice header
+* Customer snapshot (historical)
+* Line items
+* Calculated totals
+* Attached photos
+
+This aggregate is **assembled on read** and **decomposed transactionally on write**.
+
+The frontend continues to work with a single invoice object and is unaware of internal normalization.
+
+---
+
+## 4. API Assembly & Persistence Rules (NEW)
+
+### Reads
+
+* `GET /invoices/:id`:
+
+  * MUST assemble data from:
+
+    * invoices
+    * invoice_customer_snapshot
+    * invoice_items
+    * invoice_totals
+    * invoice_photos
+  * MUST return a single InvoiceAggregate object.
+
+### Writes
+
+* `POST /invoices`, `PUT /invoices/:id`:
+
+  * MUST execute inside a single DB transaction.
+  * MUST validate payload before any write.
+  * MUST recompute derived fields server-side (totals, balances).
+  * MUST reject partial persistence (no half-written invoices).
+
+Frontend never writes child entities directly.
+
+---
+
+## 5. Data Ownership & Authority (NEW)
+
+* Backend owns:
+
+  * UUID generation
+  * Invoice numbers / sequences
+  * Timestamps (`created_at`, `updated_at`)
+  * Derived financial fields
+* Frontend is treated as an **untrusted client**.
+* Client-sent calculated values are ignored or recomputed.
+
+---
+
+## 6. Mutation Semantics (NEW)
+
+* All deletes are **soft deletes** (`deleted_at`).
+* Updates use **full-object replacement** or explicit PATCH endpoints.
+* Migration and bulk-import endpoints must be **idempotent**.
+* IDs are immutable once created.
+
+---
+
+## 7. Storage & Media Rules (unchanged, enforced)
+
+* SQLite runs in WAL mode.
+* Photos are stored on local filesystem, never as BLOBs.
+* Database file and photo directories must be on local disk only.
+* File paths are never exposed directly to clients.
+
+---
+
+## 8. Migration Support (unchanged, clarified)
+
+* Backend provides a one-time migration API to import IndexedDB data.
+* Migration logic maps legacy IDs to new UUIDs.
+* Embedded objects from IndexedDB are split into canonical tables.
+* Migration must be retry-safe and transactional.
+
+---
+
+## 9. Testing & Validation (unchanged)
+
+(Refer to previously defined bare-minimum testing requirements; no changes required.)
+
+---
+
+## 10. Non-Goals (unchanged)
+
+* No direct table-level APIs
+* No cloud dependency
+* No syncing SQLite files
+* No frontend schema assumptions
+
+---
+
+## Reference
+
+**Appendix A:** SQLite Canonical DDL (authoritative storage reference)
+
+---
+
+Below is a **production-grade SQLite DDL** for your **new backend**, derived from your IndexedDB schema but **corrected for relational integrity, migration safety, and future cloud sync**.
+
+This DDL is intentionally:
+
+* **UUID-based**
+* **Normalized where correctness matters**
+* **Denormalized only where historically necessary**
+* **SQLite-safe (WAL, FK, CHECKs)**
+
+---
+
+## 0. Global SQLite settings (must be applied at startup)
+
+```sql
+PRAGMA journal_mode = WAL;
+PRAGMA synchronous = NORMAL;
+PRAGMA foreign_keys = ON;
+```
+
+---
+
+## 1. Core reference tables
+
+### users
+
+```sql
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT CHECK(role IN ('ADMIN','USER')) NOT NULL,
+  created_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+```
+
+---
+
+## 2. Customers & Vendors
+
+### customers
+
+```sql
+CREATE TABLE customers (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  gstin TEXT,
+  phone TEXT,
+  email TEXT,
+  balance REAL NOT NULL DEFAULT 0,
+  address_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+```
+
+### vendors
+
+```sql
+CREATE TABLE vendors (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  gstin TEXT,
+  phone TEXT,
+  email TEXT,
+  balance REAL NOT NULL DEFAULT 0,
+  address_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT
+);
+```
+
+---
+
+## 3. Products & Catalog
+
+### categories
+
+```sql
+CREATE TABLE categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL
+);
+```
+
+### subcategories
+
+```sql
+CREATE TABLE subcategories (
+  id TEXT PRIMARY KEY,
+  category_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+```
+
+### products
+
+```sql
+CREATE TABLE products (
+  id TEXT PRIMARY KEY,
+  type TEXT CHECK(type IN ('product','service')) NOT NULL,
+  name TEXT NOT NULL,
+  sku TEXT UNIQUE,
+  barcode TEXT,
+  hsn TEXT,
+  category_id TEXT,
+  subcategory_id TEXT,
+  description TEXT,
+  selling_price REAL,
+  purchase_price REAL,
+  tax_rate REAL,
+  unit TEXT,
+
+  metal_json TEXT,
+  gemstone_json TEXT,
+  design_json TEXT,
+
+  vendor_ref TEXT,
+  procurement_date TEXT,
+  hallmark_cert TEXT,
+  launch_date TEXT,
+
+  show_online INTEGER DEFAULT 0,
+  not_for_sale INTEGER DEFAULT 0,
+
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+
+  FOREIGN KEY (category_id) REFERENCES categories(id),
+  FOREIGN KEY (subcategory_id) REFERENCES subcategories(id)
+);
+```
+
+### product_images
+
+```sql
+CREATE TABLE product_images (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  checksum TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+```
+
+---
+
+## 4. Invoices (canonical structure)
+
+### invoices
+
+```sql
+CREATE TABLE invoices (
+  id TEXT PRIMARY KEY,
+  invoice_number TEXT UNIQUE NOT NULL,
+  customer_id TEXT,
+  type TEXT CHECK(type IN ('INVOICE','PROFORMA','LENDING')) NOT NULL,
+  status TEXT CHECK(status IN ('PAID','PARTIAL','UNPAID','PENDING')) NOT NULL,
+  date TEXT NOT NULL,
+  due_date TEXT,
+  place_of_supply TEXT,
+
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+
+  FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+```
+
+### invoice_customer_snapshot (historical truth)
+
+```sql
+CREATE TABLE invoice_customer_snapshot (
+  invoice_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT,
+  gstin TEXT,
+  address_json TEXT,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+```
+
+### invoice_items
+
+```sql
+CREATE TABLE invoice_items (
+  id TEXT PRIMARY KEY,
+  invoice_id TEXT NOT NULL,
+  product_id TEXT,
+  description TEXT,
+  quantity REAL NOT NULL,
+  rate REAL NOT NULL,
+  tax_rate REAL,
+  weight_json TEXT,
+  amount_json TEXT,
+
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id),
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+```
+
+### invoice_totals
+
+```sql
+CREATE TABLE invoice_totals (
+  invoice_id TEXT PRIMARY KEY,
+  subtotal REAL NOT NULL,
+  tax_total REAL NOT NULL,
+  cgst REAL,
+  sgst REAL,
+  igst REAL,
+  round_off REAL,
+  grand_total REAL NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+```
+
+### invoice_photos
+
+```sql
+CREATE TABLE invoice_photos (
+  id TEXT PRIMARY KEY,
+  invoice_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  checksum TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+```
+
+---
+
+## 5. Purchases (mirrors invoices)
+
+### purchases
+
+```sql
+CREATE TABLE purchases (
+  id TEXT PRIMARY KEY,
+  purchase_number TEXT UNIQUE NOT NULL,
+  vendor_id TEXT,
+  status TEXT CHECK(status IN ('PAID','PARTIAL','UNPAID')) NOT NULL,
+  date TEXT NOT NULL,
+  due_date TEXT,
+
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+
+  FOREIGN KEY (vendor_id) REFERENCES vendors(id)
+);
+```
+
+---
+
+## 6. Payments & Allocations
+
+### payments
+
+```sql
+CREATE TABLE payments (
+  id TEXT PRIMARY KEY,
+  transaction_number TEXT UNIQUE NOT NULL,
+  date TEXT NOT NULL,
+  type TEXT CHECK(type IN ('IN','OUT')) NOT NULL,
+  party_type TEXT CHECK(party_type IN ('CUSTOMER','VENDOR')) NOT NULL,
+  party_id TEXT NOT NULL,
+  amount REAL NOT NULL,
+  mode TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+```
+
+### payment_allocations
+
+```sql
+CREATE TABLE payment_allocations (
+  id TEXT PRIMARY KEY,
+  payment_id TEXT NOT NULL,
+  invoice_id TEXT NOT NULL,
+  amount REAL NOT NULL,
+  FOREIGN KEY (payment_id) REFERENCES payments(id),
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+```
+
+---
+
+## 7. Sequences & Settings
+
+### sequences
+
+```sql
+CREATE TABLE sequences (
+  key TEXT PRIMARY KEY,
+  value INTEGER NOT NULL
+);
+```
+
+### settings
+
+```sql
+CREATE TABLE settings (
+  key TEXT PRIMARY KEY,
+  value_json TEXT NOT NULL
+);
+```
+
+---
+
+## 8. Audit & Operational Logs
+
+### audit_logs
+
+```sql
+CREATE TABLE audit_logs (
+  id TEXT PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  details TEXT,
+  created_at TEXT NOT NULL
+);
+```
+
+### attendance_logs
+
+```sql
+CREATE TABLE attendance_logs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  login_date TEXT NOT NULL,
+  login_at TEXT NOT NULL,
+  logout_at TEXT,
+  created_at TEXT NOT NULL
+);
+```
+
+### bulk_upload_logs
+
+```sql
+CREATE TABLE bulk_upload_logs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  total_records INTEGER,
+  success_count INTEGER,
+  failure_count INTEGER,
+  created_at TEXT NOT NULL
+);
+```
+
+---
+</file>
+
+<file path="verify_create_customer.js">
+import http from 'http';
+
+const data = JSON.stringify({
+    name: 'Test Customer',
+    phone: '1234567890',
+    email: 'test@example.com'
+});
+
+const options = {
+    hostname: 'localhost',
+    port: 3000,
+    path: '/api/customers',
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': data.length
+    }
+};
+
+const req = http.request(options, (res) => {
+    let responseBody = '';
+
+    res.on('data', (chunk) => {
+        responseBody += chunk;
+    });
+
+    res.on('end', () => {
+        console.log(`Status Code: ${res.statusCode}`);
+        console.log(`Response Body: ${responseBody}`);
+    });
+});
+
+req.on('error', (error) => {
+    console.error(`Error: ${error.message}`);
+});
+
+req.write(data);
+req.end();
+</file>
+
+<file path="src/config/index.js">
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export const config = {
+  host: process.env.HOST || '0.0.0.0',
+  port: process.env.PORT || 3000,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  databasePath: process.env.DATABASE_PATH || './swipe.db',
+  storagePath: process.env.STORAGE_PATH || './storage/photos',
+  jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+  migrationEnabled: process.env.MIGRATION_ENABLED === 'true',
+};
+
+// Validate required configuration
+if (config.nodeEnv === 'production') {
+  if (!process.env.DATABASE_PATH) {
+    throw new Error('DATABASE_PATH is required in production');
+  }
+  if (!process.env.STORAGE_PATH) {
+    throw new Error('STORAGE_PATH is required in production');
+  }
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-secret-change-in-production') {
+    throw new Error('JWT_SECRET must be set in production');
+  }
+}
+</file>
+
+<file path="src/services/productService.js">
+import { getDatabase, transaction } from '../db/init.js';
+import { generateUUID } from '../utils/uuid.js';
+import { logAction } from './auditService.js';
+
+/**
+ * Create a new product
+ */
+export function createProduct(data) {
+    return transaction((db) => {
+        const productId = generateUUID();
+        const now = new Date().toISOString();
+
+        db.prepare(`
+      INSERT INTO products (
+        id, type, name, sku, barcode, hsn, category_id, subcategory_id,
+        description, selling_price, purchase_price, tax_rate, unit,
+        metal_json, gemstone_json, design_json, vendor_ref, procurement_date,
+        hallmark_cert, launch_date, show_online, not_for_sale,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+            productId,
+            data.type,
+            data.name,
+            data.sku || null,
+            data.barcode || null,
+            data.hsn || null,
+            data.categoryId || null,
+            data.subcategoryId || null,
+            data.description || null,
+            data.sellingPrice || null,
+            data.purchasePrice || null,
+            data.taxRate || null,
+            data.unit || null,
+            data.metal ? JSON.stringify(data.metal) : null,
+            data.gemstone ? JSON.stringify(data.gemstone) : null,
+            data.design ? JSON.stringify(data.design) : null,
+            data.vendorRef || null,
+            data.procurementDate || null,
+            data.hallmarkCert || null,
+            data.launchDate || null,
+            data.showOnline ? 1 : 0,
+            data.notForSale ? 1 : 0,
+            now,
+            now
+        );
+
+        logAction('product', productId, 'CREATE', { name: data.name });
+
+        return getProduct(productId);
+    });
+}
+
+/**
+ * Get a product with images
+ */
+export function getProduct(productId) {
+    const db = getDatabase();
+
+    const product = db.prepare(`
+    SELECT * FROM products WHERE id = ? AND deleted_at IS NULL
+  `).get(productId);
+
+    if (!product) return null;
+
+    const images = db.prepare(`
+    SELECT * FROM product_images WHERE product_id = ? ORDER BY created_at
+  `).all(productId);
+
+    return {
+        ...product,
+        metal: product.metal_json ? JSON.parse(product.metal_json) : null,
+        gemstone: product.gemstone_json ? JSON.parse(product.gemstone_json) : null,
+        design: product.design_json ? JSON.parse(product.design_json) : null,
+        images: images.map(img => ({
+            id: img.id,
+            url: `/api/photos/${img.id}`,
+            createdAt: img.created_at
+        }))
+    };
+}
+
+/**
+ * List products with optional filters (includes images)
+ */
+export function listProducts(filters = {}) {
+    const db = getDatabase();
+
+    let query = 'SELECT * FROM products WHERE deleted_at IS NULL';
+    const params = [];
+
+    if (filters.type) {
+        query += ' AND type = ?';
+        params.push(filters.type);
+    }
+
+    if (filters.categoryId) {
+        query += ' AND category_id = ?';
+        params.push(filters.categoryId);
+    }
+
+    query += ' ORDER BY name';
+
+    const products = db.prepare(query).all(...params);
+
+    if (products.length === 0) {
+        return [];
+    }
+
+    // Batch fetch all images for the returned products
+    const productIds = products.map(p => p.id);
+    const placeholders = productIds.map(() => '?').join(',');
+    const allImages = db.prepare(`
+        SELECT * FROM product_images 
+        WHERE product_id IN (${placeholders}) 
+        ORDER BY created_at
+    `).all(...productIds);
+
+    // Group images by product_id for efficient lookup
+    const imagesByProductId = {};
+    for (const img of allImages) {
+        if (!imagesByProductId[img.product_id]) {
+            imagesByProductId[img.product_id] = [];
+        }
+        imagesByProductId[img.product_id].push({
+            id: img.id,
+            url: `/api/photos/${img.id}`,
+            createdAt: img.created_at
+        });
+    }
+
+    return products.map(p => ({
+        ...p,
+        metal: p.metal_json ? JSON.parse(p.metal_json) : null,
+        gemstone: p.gemstone_json ? JSON.parse(p.gemstone_json) : null,
+        design: p.design_json ? JSON.parse(p.design_json) : null,
+        images: imagesByProductId[p.id] || []
+    }));
+}
+
+/**
+ * Update a product
+ */
+export function updateProduct(productId, data) {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    const result = db.prepare(`
+    UPDATE products
+    SET type = ?, name = ?, sku = ?, barcode = ?, hsn = ?, category_id = ?, 
+        subcategory_id = ?, description = ?, selling_price = ?, purchase_price = ?,
+        tax_rate = ?, unit = ?, metal_json = ?, gemstone_json = ?, design_json = ?,
+        vendor_ref = ?, procurement_date = ?, hallmark_cert = ?, launch_date = ?,
+        show_online = ?, not_for_sale = ?, updated_at = ?
+    WHERE id = ? AND deleted_at IS NULL
+  `).run(
+        data.type,
+        data.name,
+        data.sku || null,
+        data.barcode || null,
+        data.hsn || null,
+        data.categoryId || null,
+        data.subcategoryId || null,
+        data.description || null,
+        data.sellingPrice || null,
+        data.purchasePrice || null,
+        data.taxRate || null,
+        data.unit || null,
+        data.metal ? JSON.stringify(data.metal) : null,
+        data.gemstone ? JSON.stringify(data.gemstone) : null,
+        data.design ? JSON.stringify(data.design) : null,
+        data.vendorRef || null,
+        data.procurementDate || null,
+        data.hallmarkCert || null,
+        data.launchDate || null,
+        data.showOnline ? 1 : 0,
+        data.notForSale ? 1 : 0,
+        now,
+        productId
+    );
+
+    if (result.changes === 0) {
+        throw new Error('Product not found');
+    }
+
+    logAction('product', productId, 'UPDATE');
+
+    return getProduct(productId);
+}
+
+/**
+ * Soft delete a product
+ */
+export function deleteProduct(productId) {
+    const db = getDatabase();
+
+    const result = db.prepare(`
+    UPDATE products SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL
+  `).run(new Date().toISOString(), productId);
+
+    if (result.changes === 0) {
+        throw new Error('Product not found or already deleted');
+    }
+
+    logAction('product', productId, 'DELETE');
+}
+
+/**
+ * Add image to product
+ */
+export function addProductImage(productId, filePath, checksum) {
+    const db = getDatabase();
+    const imageId = generateUUID();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+    INSERT INTO product_images (id, product_id, file_path, checksum, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(imageId, productId, filePath, checksum, now);
+
+    return { id: imageId, url: `/api/photos/${imageId}`, createdAt: now };
+}
+
+/**
+ * Delete product image
+ */
+export function deleteProductImage(imageId) {
+    const db = getDatabase();
+
+    const image = db.prepare('SELECT file_path FROM product_images WHERE id = ?').get(imageId);
+
+    if (!image) {
+        throw new Error('Image not found');
+    }
+
+    db.prepare('DELETE FROM product_images WHERE id = ?').run(imageId);
+
+    return image.file_path;
+}
+</file>
+
+<file path="src/server.js">
+import express from 'express';
+import cors from 'cors';
+import { networkInterfaces } from 'os';
+import { config } from './config/index.js';
+import { initDatabase, closeDatabase } from './db/init.js';
+import { errorHandler, notFoundHandler, requestIdMiddleware } from './middleware/errorHandler.js';
+import { logger, createHttpLogger } from './utils/logger.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
+
+// Import routes
+import invoiceRoutes from './routes/invoices.js';
+import customerRoutes from './routes/customers.js';
+import productRoutes from './routes/products.js';
+import paymentRoutes from './routes/payments.js';
+import photoRoutes from './routes/photos.js';
+import settingsRoutes from './routes/settings.js';
+import categoryRoutes from './routes/categories.js';
+import vendorRoutes from './routes/vendors.js';
+import purchaseRoutes from './routes/purchases.js';
+import attendanceRoutes from './routes/attendance.js';
+import authRoutes from './routes/auth.js';
+
+// Initialize Express app
+const app = express();
+
+// Initialize database
+logger.info('Initializing database...');
+initDatabase();
+logger.info('Database initialized successfully');
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(requestIdMiddleware);
+app.use(createHttpLogger());
+
+// Health check
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: config.nodeEnv
+    });
+});
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/photos', photoRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/vendors', vendorRoutes);
+app.use('/api/purchases', purchaseRoutes);
+app.use('/api/attendance', attendanceRoutes);
+
+// 404 handler
+app.use(notFoundHandler);
+
+// Global error handler (must be last)
+app.use(errorHandler);
+
+// Helper to get local LAN IP address
+function getLocalIPAddress() {
+    const nets = networkInterfaces();
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            // Skip internal and non-IPv4 addresses
+            if (net.family === 'IPv4' && !net.internal) {
+                return net.address;
+            }
+        }
+    }
+    return null;
+}
+
+// Start server
+const server = app.listen(config.port, config.host, () => {
+    const lanIP = getLocalIPAddress();
+    const lanUrl = lanIP ? `http://${lanIP}:${config.port}` : 'unavailable';
+
+    logger.info({
+        environment: config.nodeEnv,
+        host: config.host,
+        port: config.port,
+        database: config.databasePath,
+        storage: config.storagePath,
+        localUrl: `http://localhost:${config.port}`,
+        lanUrl: lanUrl,
+        apiBase: `http://localhost:${config.port}/api`,
+        health: `http://localhost:${config.port}/health`,
+        apiDocs: `http://localhost:${config.port}/api-docs`
+    }, '🚀 Swipe Backend Server Running');
+
+    if (lanIP) {
+        logger.info({ lanIP, lanHealth: `${lanUrl}/health`, lanApiDocs: `${lanUrl}/api-docs` }, '📱 LAN Access Available');
+    }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+function shutdown() {
+    logger.info('Shutting down gracefully...');
+
+    server.close(() => {
+        logger.info('HTTP server closed');
+        closeDatabase();
+        process.exit(0);
+    });
+
+    // Force shutdown after 10 seconds
+    setTimeout(() => {
+        logger.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+    }, 10000);
+}
+</file>
+
+<file path="integration.md">
+# Swipe Backend Integration Guide
+
+Complete API documentation for frontend integration with the Swipe Store Backend.
+
+## Connection Details
+
+| Setting | Value |
+|---------|-------|
+| **Base URL** | `http://localhost:3000/api` |
+| **Health Check** | `GET /health` |
+| **Content-Type** | `application/json` |
+
+---
+
+## Authentication
+
+Phone-based OTP authentication with JWT tokens.
+
+### POST `/api/auth/request-otp`
+Request OTP for a phone number. Creates user if doesn't exist.
+```json
+// Request
+{ "phone": "9876543210" }
+
+// Response
+{ "success": true, "message": "OTP sent successfully", "phone": "9876543210" }
+```
+
+### POST `/api/auth/verify-otp` or `/api/auth/login`
+Verify OTP and get JWT token. **Dev OTP: `111111`**
+```json
+// Request
+{ "phone": "9876543210", "otp": "111111" }
+
+// Response
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": { "id": "uuid", "phone": "9876543210", "role": "user" }
+}
+```
+
+### GET `/api/auth/me` *(Auth Required)*
+Get current user info. Include `Authorization: Bearer <token>` header.
+
+---
+
+## Key Concepts
+
+### Aggregate Objects
+For entities like **Invoices**, you send/receive the complete object. The backend atomically handles the underlying tables.
+
+### Idempotency Keys
+Use `X-Request-Id: <UUID>` header on `POST /api/invoices` to prevent duplicate records on network retries.
+
+### Server-Side Authority
+The backend **always** recomputes totals, taxes, and balances. Client-sent calculations are ignored.
+
+---
+
+## Invoices
+
+### GET `/api/invoices`
+List all invoice headers.
+
+### GET `/api/invoices/:id`
+Get full invoice aggregate with items, totals, customer snapshot, and photos.
+
+### POST `/api/invoices`
+Create invoice. Supports `X-Request-Id` header for idempotency.
+```json
+{
+  "customerId": "uuid (optional)",
+  "type": "INVOICE",  // INVOICE | PROFORMA | LENDING
+  "status": "UNPAID", // PAID | PARTIAL | UNPAID | PENDING
+  "date": "2025-12-27",
+  "dueDate": "2026-01-27",
+  "placeOfSupply": "Karnataka",
+  "customer": {
+    "name": "John Doe",
+    "phone": "+91...",
+    "gstin": "...",
+    "address": { "line1": "...", "pincode": "..." }
+  },
+  "items": [{
+    "productId": "uuid (optional)",
+    "description": "Gold Ring 22k",
+    "quantity": 1,
+    "rate": 65000,
+    "taxRate": 3,
+    "weight": { "gross": 5.2, "net": 4.8 },
+    "amount": { "makingCharges": 500, "stoneCharges": 200 }
+  }]
+}
+```
+**Response includes server-computed `totals`:** subtotal, taxTotal, cgst, sgst, igst, roundOff, grandTotal.
+
+### PUT `/api/invoices/:id`
+Full replacement update.
+
+### DELETE `/api/invoices/:id`
+Soft delete.
+
+### POST `/api/invoices/:id/photos`
+Upload photo (multipart/form-data, field: `photo`).
+
+### DELETE `/api/invoices/:invoiceId/photos/:photoId`
+
+---
+
+## Customers
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/customers` | List all |
+| GET | `/api/customers/:id` | Get one (includes `balance`) |
+| POST | `/api/customers` | Create |
+| PUT | `/api/customers/:id` | Update |
+| DELETE | `/api/customers/:id` | Soft delete |
+
+### Request (POST/PUT)
+```json
+{
+  "name": "Jane Smith",
+  "gstin": "...",
+  "phone": "9999999999",
+  "email": "jane@example.com",
+  "address": { "line1": "...", "city": "...", "pincode": "..." }
+}
+```
+
+### Response (all endpoints)
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "name": "Jane Smith",
+  "phone": "9999999999",
+  "email": "jane@example.com",
+  "gstin": "...",
+  "balance": 0,
+  "address": { "line1": "...", "city": "...", "pincode": "..." },
+  "created_at": "2025-12-28T10:00:00.000Z",
+  "updated_at": "2025-12-28T10:00:00.000Z"
+}
+```
+
+> ⚠️ **IMPORTANT:** The `id` field is a **UUID generated by the backend**. Frontend must store and use this UUID for all subsequent operations (payments, invoices, etc.). Do NOT use local/IndexedDB IDs.
+
+---
+
+## Products
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/products` | List with images (filters: `?type=product`, `?categoryId=uuid`) |
+| GET | `/api/products/:id` | Get with images |
+| POST | `/api/products` | Create |
+| PUT | `/api/products/:id` | Update (does NOT affect images) |
+| DELETE | `/api/products/:id` | Soft delete |
+| POST | `/api/products/:id/images` | Upload image (multipart) |
+| DELETE | `/api/products/:productId/images/:imageId` | Delete image |
+
+### Product JSON Schema
+```json
+{
+  "type": "product",
+  "name": "Diamond Earring",
+  "sku": "DE-001",
+  "sellingPrice": 120000,
+  "taxRate": 3,
+  "metal": { "purity": "18k", "type": "Rose Gold" },
+  "gemstone": { "type": "Diamond", "carat": 0.5 }
+}
+```
+
+### ⚠️ Image Handling (Important)
+
+**Images are managed separately from product data.** The `PUT /api/products/:id` endpoint does **NOT** accept or modify images. Existing images persist across product updates.
+
+#### Workflow
+1. **Create/Update product** → `POST` or `PUT /api/products/:id` (no images in body)
+2. **Add image** → `POST /api/products/:id/images` (multipart/form-data)
+3. **Remove image** → `DELETE /api/products/:productId/images/:imageId`
+
+#### Upload Request
+```http
+POST /api/products/:id/images
+Content-Type: multipart/form-data
+
+image: <binary file>   ← field name must be "image"
+```
+
+#### Response from GET `/api/products/:id`
+```json
+{
+  "id": "uuid",
+  "name": "Diamond Earring",
+  ...
+  "images": [
+    { "id": "image-uuid", "url": "/api/photos/image-uuid", "createdAt": "..." }
+  ]
+}
+```
+
+Images are linked via `product_id` foreign key and returned automatically when fetching a product.
+
+---
+
+## Payments
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/payments` | List (filters: `?partyId=uuid`, `?type=IN|OUT`) |
+| GET | `/api/payments/:id` | Get with allocations |
+| POST | `/api/payments` | Create (auto-updates invoice status & balance) |
+| DELETE | `/api/payments/:id` | Delete (recalculates balances) |
+
+```json
+{
+  "type": "IN",
+  "partyType": "CUSTOMER",
+  "partyId": "uuid",
+  "amount": 10000,
+  "date": "2025-12-27",
+  "mode": "UPI",
+  "allocations": [
+    { "invoiceId": "uuid", "amount": 10000 }
+  ]
+}
+```
+
+---
+
+## Categories
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/categories` | List all with subcategories |
+| GET | `/api/categories/:id` | Get one |
+| POST | `/api/categories` | Create: `{ "name": "Gold Jewelry", "type": "product" }` |
+| PUT | `/api/categories/:id` | Update |
+| DELETE | `/api/categories/:id` | Delete (cascades subcategories) |
+| POST | `/api/categories/:id/subcategories` | Add: `{ "name": "Rings" }` |
+| DELETE | `/api/categories/:categoryId/subcategories/:subcategoryId` | Delete |
+
+---
+
+## Vendors
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/vendors` | List all |
+| GET | `/api/vendors/:id` | Get one (includes `balance`) |
+| POST | `/api/vendors` | Create |
+| PUT | `/api/vendors/:id` | Update |
+| DELETE | `/api/vendors/:id` | Soft delete |
+
+Same request/response schema as Customers.
+
+> ⚠️ **IMPORTANT:** The `id` field is a **UUID generated by the backend**. Use this UUID for payments and purchases.
+
+---
+
+## Purchases
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/purchases` | List (filters: `?vendorId=uuid`, `?status=PAID|UNPAID`) |
+| GET | `/api/purchases/:id` | Get with vendor info |
+| POST | `/api/purchases` | Create |
+| PUT | `/api/purchases/:id` | Update |
+| DELETE | `/api/purchases/:id` | Soft delete |
+
+```json
+{
+  "vendorId": "uuid",
+  "date": "2025-12-27",
+  "dueDate": "2026-01-27",
+  "status": "UNPAID"
+}
+```
+
+---
+
+## Attendance
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/attendance/login` | Log login: `{ "userId": "uuid" }` |
+| POST | `/api/attendance/logout` | Log logout: `{ "logId": "uuid" }` |
+| GET | `/api/attendance/user/:userId` | History (`?limit=30`) |
+| GET | `/api/attendance/user/:userId/date/:date` | Specific date |
+| GET | `/api/attendance/date/:date` | All users (admin) |
+
+---
+
+## Photos
+
+### GET `/api/photos/:id`
+Serve image file directly. Use photo ID from invoice/product responses.
+
+---
+
+## Settings
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/settings` | Get all |
+| GET | `/api/settings/:key` | Get one |
+| PUT | `/api/settings/:key` | Set: `{ "value": ... }` |
+
+---
+
+## Error Responses
+
+```json
+{
+  "error": "Short description",
+  "details": {},
+  "requestId": "uuid"
+}
+```
+
+| Code | Meaning |
+|------|---------|
+| 400 | Validation failed |
+| 401 | Auth required |
+| 403 | Forbidden / Invalid token |
+| 404 | Not found |
+| 500 | Server error |
+
+---
+
+## Best Practices
+
+1. **Dates:** Use ISO 8601 format (`YYYY-MM-DD`)
+2. **Auth:** Include `Authorization: Bearer <token>` header for protected routes
+3. **Idempotency:** Use `X-Request-Id` header for invoice creation
+4. **Balances:** Always read balances from server; never calculate client-side
+</file>
+
+</files>

@@ -1,7 +1,13 @@
 import express from 'express';
 import { getSetting, setSetting, getAllSettings } from '../services/settingsService.js';
+import { authenticateToken, adminOnly } from '../middleware/auth.js';
+import { injectShopScope } from '../middleware/shopScope.js';
 
 const router = express.Router();
+
+// All routes require authentication and shop scope
+router.use(authenticateToken);
+router.use(injectShopScope);
 
 /**
  * @swagger
@@ -9,19 +15,10 @@ const router = express.Router();
  *   get:
  *     summary: Get all settings
  *     tags: [Settings]
- *     responses:
- *       200:
- *         description: All settings
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               additionalProperties:
- *                 type: object 
  */
 router.get('/', (req, res, next) => {
     try {
-        const settings = getAllSettings();
+        const settings = getAllSettings(req.shopId);
         res.json(settings);
     } catch (error) {
         next(error);
@@ -34,25 +31,10 @@ router.get('/', (req, res, next) => {
  *   get:
  *     summary: Get single setting
  *     tags: [Settings]
- *     parameters:
- *       - in: path
- *         name: key
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Setting value
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Setting'
- *       404:
- *         description: Setting not found
  */
 router.get('/:key', (req, res, next) => {
     try {
-        const value = getSetting(req.params.key);
+        const value = getSetting(req.shopId, req.params.key);
 
         if (value === null) {
             return res.status(404).json({
@@ -71,36 +53,10 @@ router.get('/:key', (req, res, next) => {
  * @swagger
  * /api/settings/{key}:
  *   put:
- *     summary: Set a setting
+ *     summary: Set a setting (ADMIN only)
  *     tags: [Settings]
- *     parameters:
- *       - in: path
- *         name: key
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               value:
- *                 oneOf:
- *                   - type: string
- *                   - type: number
- *                   - type: boolean
- *                   - type: object
- *     responses:
- *       200:
- *         description: Setting updated
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Setting'
  */
-router.put('/:key', (req, res, next) => {
+router.put('/:key', adminOnly, (req, res, next) => {
     try {
         const { value } = req.body;
 
@@ -111,7 +67,7 @@ router.put('/:key', (req, res, next) => {
             });
         }
 
-        setSetting(req.params.key, value);
+        setSetting(req.shopId, req.params.key, value);
         res.json({ key: req.params.key, value });
     } catch (error) {
         next(error);

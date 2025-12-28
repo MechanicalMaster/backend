@@ -12,12 +12,57 @@ Complete API documentation for frontend integration with the Swipe Store Backend
 
 ---
 
+## Multi-User Architecture
+
+### Shop (Tenant) Model
+- All business data belongs to a **Shop**
+- Users authenticate and operate within exactly one shop
+- Data is completely isolated between shops
+
+### Shop Bootstrap (Initial Setup)
+
+Before any user can login, a shop must be created via the setup API:
+
+#### GET `/api/setup/status`
+Check if shop exists.
+```json
+// Response
+{ "setupComplete": false, "shop": null }
+```
+
+#### POST `/api/setup/bootstrap`
+Create shop and admin user (one-time setup).
+```json
+// Request
+{
+  "shopName": "My Shop",
+  "adminPhone": "9876543210",
+  "setupSecret": "your-setup-secret"
+}
+
+// Response
+{
+  "success": true,
+  "shop": { "id": "shop-uuid", "name": "My Shop" },
+  "user": { "id": "user-uuid", "phone": "9876543210", "role": "ADMIN" }
+}
+```
+
+> **Note:** `setupSecret` must match the `SETUP_SECRET` environment variable.
+
+### Post-Setup Login Behavior
+- **Registered users** → Normal OTP login
+- **Unregistered users** → `403: User not registered. Contact your shop admin.`
+- **Shops are never auto-created** during login
+
+---
+
 ## Authentication
 
 Phone-based OTP authentication with JWT tokens.
 
 ### POST `/api/auth/request-otp`
-Request OTP for a phone number. Creates user if doesn't exist.
+Request OTP for a phone number.
 ```json
 // Request
 { "phone": "9876543210" }
@@ -35,12 +80,94 @@ Verify OTP and get JWT token. **Dev OTP: `111111`**
 // Response
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": { "id": "uuid", "phone": "9876543210", "role": "user" }
+  "user": { 
+    "id": "uuid", 
+    "phone": "9876543210", 
+    "name": "John",
+    "role": "ADMIN",
+    "shopId": "shop-uuid"
+  }
 }
 ```
 
 ### GET `/api/auth/me` *(Auth Required)*
-Get current user info. Include `Authorization: Bearer <token>` header.
+Get current user info with shop details.
+```json
+// Response
+{
+  "id": "user-uuid",
+  "phone": "9876543210",
+  "name": "John",
+  "role": "ADMIN",
+  "shop": {
+    "id": "shop-uuid",
+    "name": "My Shop"
+  }
+}
+```
+
+### JWT Token Structure
+```json
+{
+  "userId": "user-uuid",
+  "shopId": "shop-uuid",
+  "role": "ADMIN"
+}
+```
+
+---
+
+## User Management (ADMIN Only)
+
+### GET `/api/auth/users`
+List all users in your shop.
+```json
+// Response
+[
+  { "id": "uuid", "phone": "9876543210", "name": "John", "role": "ADMIN", "created_at": "..." }
+]
+```
+
+### POST `/api/auth/users`
+Create a new user in your shop.
+```json
+// Request
+{ "phone": "1111111111", "name": "Sales Person", "role": "SALES" }
+
+// Response
+{ "id": "uuid", "phone": "1111111111", "name": "Sales Person", "role": "SALES", "shop": {...} }
+```
+
+> **Note:** Role defaults to `SALES` if not specified.
+
+---
+
+## Role Permissions
+
+| Action | ADMIN | SALES |
+|--------|-------|-------|
+| Create (customers, products, etc.) | ✅ | ✅ |
+| Read all data | ✅ | ✅ |
+| Update records | ✅ | ✅ |
+| Delete records | ✅ | ❌ |
+| Change settings | ✅ | ❌ |
+| Manage users | ✅ | ❌ |
+
+---
+
+## LAN Multi-User Setup
+
+Run one backend on the local network:
+```bash
+npm start
+# Server shows LAN URL: http://192.168.x.x:3000
+```
+
+Multiple devices can connect:
+1. All devices point to the same backend URL
+2. Each user logs in with their phone number
+3. First login creates the shop; subsequent logins join as users (via admin invite)
+4. All data syncs in real-time across devices
 
 ---
 

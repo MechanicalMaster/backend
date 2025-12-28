@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { networkInterfaces } from 'os';
 import { config } from './config/index.js';
 import { initDatabase, closeDatabase } from './db/init.js';
 import { errorHandler, notFoundHandler, requestIdMiddleware } from './middleware/errorHandler.js';
@@ -66,16 +67,41 @@ app.use(notFoundHandler);
 // Global error handler (must be last)
 app.use(errorHandler);
 
+// Helper to get local LAN IP address
+function getLocalIPAddress() {
+    const nets = networkInterfaces();
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            // Skip internal and non-IPv4 addresses
+            if (net.family === 'IPv4' && !net.internal) {
+                return net.address;
+            }
+        }
+    }
+    return null;
+}
+
 // Start server
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, config.host, () => {
+    const lanIP = getLocalIPAddress();
+    const lanUrl = lanIP ? `http://${lanIP}:${config.port}` : 'unavailable';
+
     logger.info({
         environment: config.nodeEnv,
+        host: config.host,
         port: config.port,
         database: config.databasePath,
         storage: config.storagePath,
+        localUrl: `http://localhost:${config.port}`,
+        lanUrl: lanUrl,
         apiBase: `http://localhost:${config.port}/api`,
-        health: `http://localhost:${config.port}/health`
+        health: `http://localhost:${config.port}/health`,
+        apiDocs: `http://localhost:${config.port}/api-docs`
     }, '🚀 Swipe Backend Server Running');
+
+    if (lanIP) {
+        logger.info({ lanIP, lanHealth: `${lanUrl}/health`, lanApiDocs: `${lanUrl}/api-docs` }, '📱 LAN Access Available');
+    }
 });
 
 // Graceful shutdown

@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
+  host: process.env.HOST || '0.0.0.0',
   port: process.env.PORT || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
   databasePath: process.env.DATABASE_PATH || './swipe.db',

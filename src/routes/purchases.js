@@ -63,7 +63,7 @@ router.get('/:id', (req, res, next) => {
  */
 router.post('/', (req, res, next) => {
     try {
-        const purchase = createPurchase(req.shopId, req.body);
+        const purchase = createPurchase(req.shopId, req.body, req.user.userId);
         res.status(201).json(purchase);
     } catch (error) {
         next(error);
@@ -79,7 +79,7 @@ router.post('/', (req, res, next) => {
  */
 router.put('/:id', (req, res, next) => {
     try {
-        const purchase = updatePurchase(req.shopId, req.params.id, req.body);
+        const purchase = updatePurchase(req.shopId, req.params.id, req.body, req.user.userId);
         res.json(purchase);
     } catch (error) {
         next(error);
@@ -95,7 +95,7 @@ router.put('/:id', (req, res, next) => {
  */
 router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deletePurchase(req.shopId, req.params.id);
+        deletePurchase(req.shopId, req.params.id, req.user.userId);
         res.status(204).send();
     } catch (error) {
         next(error);

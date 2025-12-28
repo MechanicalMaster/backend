@@ -61,7 +61,7 @@ router.get('/:id', (req, res, next) => {
  */
 router.post('/', (req, res, next) => {
     try {
-        const category = createCategory(req.shopId, req.body);
+        const category = createCategory(req.shopId, req.body, req.user.userId);
         res.status(201).json(category);
     } catch (error) {
         next(error);
@@ -77,7 +77,7 @@ router.post('/', (req, res, next) => {
  */
 router.put('/:id', (req, res, next) => {
     try {
-        const category = updateCategory(req.shopId, req.params.id, req.body);
+        const category = updateCategory(req.shopId, req.params.id, req.body, req.user.userId);
         res.json(category);
     } catch (error) {
         next(error);
@@ -93,7 +93,7 @@ router.put('/:id', (req, res, next) => {
  */
 router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deleteCategory(req.shopId, req.params.id);
+        deleteCategory(req.shopId, req.params.id, req.user.userId);
         res.status(204).send();
     } catch (error) {
         next(error);
@@ -109,7 +109,7 @@ router.delete('/:id', adminOnly, (req, res, next) => {
  */
 router.post('/:id/subcategories', (req, res, next) => {
     try {
-        const subcategory = createSubcategory(req.shopId, req.params.id, req.body);
+        const subcategory = createSubcategory(req.shopId, req.params.id, req.body, req.user.userId);
         res.status(201).json(subcategory);
     } catch (error) {
         next(error);
@@ -125,7 +125,7 @@ router.post('/:id/subcategories', (req, res, next) => {
  */
 router.delete('/:categoryId/subcategories/:subcategoryId', adminOnly, (req, res, next) => {
     try {
-        deleteSubcategory(req.shopId, req.params.subcategoryId);
+        deleteSubcategory(req.shopId, req.params.subcategoryId, req.user.userId);
         res.status(204).send();
     } catch (error) {
         next(error);

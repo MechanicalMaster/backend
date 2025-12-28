@@ -75,7 +75,7 @@ router.get('/:id', (req, res, next) => {
  */
 router.post('/', validate(schemas.product), (req, res, next) => {
     try {
-        const product = createProduct(req.shopId, req.body);
+        const product = createProduct(req.shopId, req.body, req.user.userId);
         res.status(201).json(product);
     } catch (error) {
         next(error);
@@ -91,7 +91,7 @@ router.post('/', validate(schemas.product), (req, res, next) => {
  */
 router.put('/:id', validate(schemas.product), (req, res, next) => {
     try {
-        const product = updateProduct(req.shopId, req.params.id, req.body);
+        const product = updateProduct(req.shopId, req.params.id, req.body, req.user.userId);
         res.json(product);
     } catch (error) {
         next(error);
@@ -107,7 +107,7 @@ router.put('/:id', validate(schemas.product), (req, res, next) => {
  */
 router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deleteProduct(req.shopId, req.params.id);
+        deleteProduct(req.shopId, req.params.id, req.user.userId);
         res.status(204).send();
     } catch (error) {
         next(error);

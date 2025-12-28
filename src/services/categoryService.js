@@ -8,8 +8,9 @@ import { logAction } from './auditService.js';
  * Create a new category
  * @param {string} shopId - Shop UUID
  * @param {Object} data - Category data
+ * @param {string} actorUserId - User performing the action
  */
-export function createCategory(shopId, data) {
+export function createCategory(shopId, data, actorUserId) {
     const db = getDatabase();
     const categoryId = generateUUID();
 
@@ -17,15 +18,13 @@ export function createCategory(shopId, data) {
     INSERT INTO categories (id, shop_id, name, type) VALUES (?, ?, ?, ?)
   `).run(categoryId, shopId, data.name, data.type);
 
-    logAction(shopId, 'category', categoryId, 'CREATE', { name: data.name });
+    logAction(shopId, 'category', categoryId, 'CREATE', { name: data.name }, actorUserId);
 
     return getCategory(shopId, categoryId);
 }
 
 /**
  * Get a single category with subcategories
- * @param {string} shopId - Shop UUID
- * @param {string} categoryId - Category UUID
  */
 export function getCategory(shopId, categoryId) {
     const db = getDatabase();
@@ -42,7 +41,6 @@ export function getCategory(shopId, categoryId) {
 
 /**
  * List all categories with subcategories
- * @param {string} shopId - Shop UUID
  */
 export function listCategories(shopId) {
     const db = getDatabase();
@@ -61,15 +59,16 @@ export function listCategories(shopId) {
  * @param {string} shopId - Shop UUID
  * @param {string} categoryId - Category UUID
  * @param {Object} data - Update data
+ * @param {string} actorUserId - User performing the action
  */
-export function updateCategory(shopId, categoryId, data) {
+export function updateCategory(shopId, categoryId, data, actorUserId) {
     const db = getDatabase();
     const result = db.prepare(
         'UPDATE categories SET name = ?, type = ? WHERE id = ? AND shop_id = ?'
     ).run(data.name, data.type, categoryId, shopId);
 
     if (result.changes === 0) throw new Error('Category not found');
-    logAction(shopId, 'category', categoryId, 'UPDATE');
+    logAction(shopId, 'category', categoryId, 'UPDATE', null, actorUserId);
     return getCategory(shopId, categoryId);
 }
 
@@ -77,18 +76,17 @@ export function updateCategory(shopId, categoryId, data) {
  * Delete a category
  * @param {string} shopId - Shop UUID
  * @param {string} categoryId - Category UUID
+ * @param {string} actorUserId - User performing the action
  */
-export function deleteCategory(shopId, categoryId) {
+export function deleteCategory(shopId, categoryId, actorUserId) {
     const db = getDatabase();
 
-    // Verify category belongs to shop
     const category = db.prepare('SELECT id FROM categories WHERE id = ? AND shop_id = ?').get(categoryId, shopId);
     if (!category) throw new Error('Category not found');
 
-    // Also delete subcategories
     db.prepare('DELETE FROM subcategories WHERE category_id = ?').run(categoryId);
     db.prepare('DELETE FROM categories WHERE id = ?').run(categoryId);
-    logAction(shopId, 'category', categoryId, 'DELETE');
+    logAction(shopId, 'category', categoryId, 'DELETE', null, actorUserId);
 }
 
 /**
@@ -96,11 +94,11 @@ export function deleteCategory(shopId, categoryId) {
  * @param {string} shopId - Shop UUID (for validation)
  * @param {string} categoryId - Category UUID
  * @param {Object} data - Subcategory data
+ * @param {string} actorUserId - User performing the action
  */
-export function createSubcategory(shopId, categoryId, data) {
+export function createSubcategory(shopId, categoryId, data, actorUserId) {
     const db = getDatabase();
 
-    // Verify category belongs to shop
     const category = db.prepare('SELECT id FROM categories WHERE id = ? AND shop_id = ?').get(categoryId, shopId);
     if (!category) throw new Error('Category not found');
 
@@ -110,7 +108,7 @@ export function createSubcategory(shopId, categoryId, data) {
     INSERT INTO subcategories (id, category_id, name) VALUES (?, ?, ?)
   `).run(subcategoryId, categoryId, data.name);
 
-    logAction(shopId, 'subcategory', subcategoryId, 'CREATE', { name: data.name });
+    logAction(shopId, 'subcategory', subcategoryId, 'CREATE', { name: data.name }, actorUserId);
 
     return { id: subcategoryId, category_id: categoryId, name: data.name };
 }
@@ -119,11 +117,11 @@ export function createSubcategory(shopId, categoryId, data) {
  * Delete a subcategory
  * @param {string} shopId - Shop UUID (for validation)
  * @param {string} subcategoryId - Subcategory UUID
+ * @param {string} actorUserId - User performing the action
  */
-export function deleteSubcategory(shopId, subcategoryId) {
+export function deleteSubcategory(shopId, subcategoryId, actorUserId) {
     const db = getDatabase();
 
-    // Verify subcategory belongs to a category in this shop
     const subcategory = db.prepare(`
         SELECT sc.id FROM subcategories sc
         JOIN categories c ON sc.category_id = c.id
@@ -133,5 +131,5 @@ export function deleteSubcategory(shopId, subcategoryId) {
     if (!subcategory) throw new Error('Subcategory not found');
 
     db.prepare('DELETE FROM subcategories WHERE id = ?').run(subcategoryId);
-    logAction(shopId, 'subcategory', subcategoryId, 'DELETE');
+    logAction(shopId, 'subcategory', subcategoryId, 'DELETE', null, actorUserId);
 }

@@ -72,7 +72,7 @@ router.get('/:id', (req, res, next) => {
 router.post('/', validate(schemas.invoice), (req, res, next) => {
     try {
         const requestId = req.headers['x-request-id'] || null;
-        const invoice = createInvoice(req.shopId, req.body, requestId);
+        const invoice = createInvoice(req.shopId, req.body, requestId, req.user.userId);
 
         res.status(201).json(invoice);
     } catch (error) {
@@ -86,7 +86,7 @@ router.post('/', validate(schemas.invoice), (req, res, next) => {
  */
 router.put('/:id', validate(schemas.invoice), (req, res, next) => {
     try {
-        const invoice = updateInvoice(req.shopId, req.params.id, req.body);
+        const invoice = updateInvoice(req.shopId, req.params.id, req.body, req.user.userId);
         res.json(invoice);
     } catch (error) {
         next(error);
@@ -99,7 +99,7 @@ router.put('/:id', validate(schemas.invoice), (req, res, next) => {
  */
 router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deleteInvoice(req.shopId, req.params.id);
+        deleteInvoice(req.shopId, req.params.id, req.user.userId);
         res.status(204).send();
     } catch (error) {
         next(error);

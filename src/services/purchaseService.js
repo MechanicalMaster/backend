@@ -9,8 +9,9 @@ import { logAction } from './auditService.js';
  * Create a new purchase
  * @param {string} shopId - Shop UUID
  * @param {Object} data - Purchase data
+ * @param {string} actorUserId - User performing the action
  */
-export function createPurchase(shopId, data) {
+export function createPurchase(shopId, data, actorUserId) {
     return transaction((db) => {
         const purchaseId = generateUUID();
         const purchaseNumber = generatePurchaseNumber(shopId);
@@ -20,26 +21,18 @@ export function createPurchase(shopId, data) {
       INSERT INTO purchases (id, shop_id, purchase_number, vendor_id, status, date, due_date, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-            purchaseId,
-            shopId,
-            purchaseNumber,
-            data.vendorId || null,
-            data.status || 'UNPAID',
-            data.date,
-            data.dueDate || null,
-            now,
-            now
+            purchaseId, shopId, purchaseNumber,
+            data.vendorId || null, data.status || 'UNPAID',
+            data.date, data.dueDate || null, now, now
         );
 
-        logAction(shopId, 'purchase', purchaseId, 'CREATE', { purchaseNumber });
+        logAction(shopId, 'purchase', purchaseId, 'CREATE', { purchaseNumber }, actorUserId);
         return getPurchase(shopId, purchaseId);
     });
 }
 
 /**
  * Get a single purchase
- * @param {string} shopId - Shop UUID
- * @param {string} purchaseId - Purchase UUID
  */
 export function getPurchase(shopId, purchaseId) {
     const db = getDatabase();
@@ -49,7 +42,6 @@ export function getPurchase(shopId, purchaseId) {
 
     if (!purchase) return null;
 
-    // Get vendor info if exists
     let vendor = null;
     if (purchase.vendor_id) {
         vendor = db.prepare('SELECT id, name, phone FROM vendors WHERE id = ? AND shop_id = ?').get(purchase.vendor_id, shopId);
@@ -60,8 +52,6 @@ export function getPurchase(shopId, purchaseId) {
 
 /**
  * List all purchases for a shop
- * @param {string} shopId - Shop UUID
- * @param {Object} filters - Optional filters
  */
 export function listPurchases(shopId, filters = {}) {
     const db = getDatabase();
@@ -87,26 +77,19 @@ export function listPurchases(shopId, filters = {}) {
  * @param {string} shopId - Shop UUID
  * @param {string} purchaseId - Purchase UUID
  * @param {Object} data - Update data
+ * @param {string} actorUserId - User performing the action
  */
-export function updatePurchase(shopId, purchaseId, data) {
+export function updatePurchase(shopId, purchaseId, data, actorUserId) {
     const db = getDatabase();
     const now = new Date().toISOString();
 
     const result = db.prepare(`
     UPDATE purchases SET vendor_id = ?, status = ?, date = ?, due_date = ?, updated_at = ?
     WHERE id = ? AND shop_id = ? AND deleted_at IS NULL
-  `).run(
-        data.vendorId || null,
-        data.status,
-        data.date,
-        data.dueDate || null,
-        now,
-        purchaseId,
-        shopId
-    );
+  `).run(data.vendorId || null, data.status, data.date, data.dueDate || null, now, purchaseId, shopId);
 
     if (result.changes === 0) throw new Error('Purchase not found');
-    logAction(shopId, 'purchase', purchaseId, 'UPDATE');
+    logAction(shopId, 'purchase', purchaseId, 'UPDATE', null, actorUserId);
     return getPurchase(shopId, purchaseId);
 }
 
@@ -114,13 +97,14 @@ export function updatePurchase(shopId, purchaseId, data) {
  * Soft delete a purchase
  * @param {string} shopId - Shop UUID
  * @param {string} purchaseId - Purchase UUID
+ * @param {string} actorUserId - User performing the action
  */
-export function deletePurchase(shopId, purchaseId) {
+export function deletePurchase(shopId, purchaseId, actorUserId) {
     const db = getDatabase();
     const result = db.prepare(
         'UPDATE purchases SET deleted_at = ? WHERE id = ? AND shop_id = ? AND deleted_at IS NULL'
     ).run(new Date().toISOString(), purchaseId, shopId);
 
     if (result.changes === 0) throw new Error('Purchase not found');
-    logAction(shopId, 'purchase', purchaseId, 'DELETE');
+    logAction(shopId, 'purchase', purchaseId, 'DELETE', null, actorUserId);
 }

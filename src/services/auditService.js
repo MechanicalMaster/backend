@@ -6,18 +6,19 @@ import { generateUUID } from '../utils/uuid.js';
 /**
  * Log an action to audit trail
  * 
- * @param {string} shopId - Shop UUID
- * @param {string} entityType - Type of entity (e.g., 'invoice', 'customer')
- * @param {string} entityId - ID of the entity
- * @param {string} action - Action performed (e.g., 'CREATE', 'UPDATE', 'DELETE')
- * @param {*} details - Additional details (will be JSON stringified)
- * @param {string} actorUserId - Optional user who performed the action (from req.user.userId)
+ * @param {string} shopId - Shop UUID (required)
+ * @param {string} entityType - Type of entity (required)
+ * @param {string} entityId - ID of the entity (required)
+ * @param {string} action - Action performed (required)
+ * @param {*} details - Additional details (optional)
+ * @param {string} actorUserId - User who performed the action (REQUIRED)
  */
-export function logAction(shopId, entityType, entityId, action, details = null, actorUserId = null) {
+export function logAction(shopId, entityType, entityId, action, details = null, actorUserId) {
   const db = getDatabase();
 
-  // If no actor provided, use a placeholder (should be improved in routes)
-  const actor = actorUserId || 'system';
+  if (!actorUserId) {
+    throw new Error('actorUserId is required for audit logging');
+  }
 
   const stmt = db.prepare(`
     INSERT INTO audit_logs (id, shop_id, actor_user_id, entity_type, entity_id, action, details, created_at)
@@ -27,7 +28,7 @@ export function logAction(shopId, entityType, entityId, action, details = null, 
   stmt.run(
     generateUUID(),
     shopId,
-    actor,
+    actorUserId,
     entityType,
     entityId,
     action,

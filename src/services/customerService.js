@@ -9,8 +9,9 @@ import { logAction } from './auditService.js';
  * Create a new customer
  * @param {string} shopId - Shop UUID
  * @param {Object} data - Customer data
+ * @param {string} actorUserId - User performing the action
  */
-export function createCustomer(shopId, data) {
+export function createCustomer(shopId, data, actorUserId) {
   const db = getDatabase();
   const customerId = generateUUID();
   const now = new Date().toISOString();
@@ -32,7 +33,7 @@ export function createCustomer(shopId, data) {
     now
   );
 
-  logAction(shopId, 'customer', customerId, 'CREATE', { name: data.name });
+  logAction(shopId, 'customer', customerId, 'CREATE', { name: data.name }, actorUserId);
 
   return getCustomer(shopId, customerId);
 }
@@ -79,8 +80,9 @@ export function listCustomers(shopId) {
  * @param {string} shopId - Shop UUID
  * @param {string} customerId - Customer UUID
  * @param {Object} data - Update data
+ * @param {string} actorUserId - User performing the action
  */
-export function updateCustomer(shopId, customerId, data) {
+export function updateCustomer(shopId, customerId, data, actorUserId) {
   const db = getDatabase();
   const now = new Date().toISOString();
 
@@ -103,7 +105,7 @@ export function updateCustomer(shopId, customerId, data) {
     throw new Error('Customer not found');
   }
 
-  logAction(shopId, 'customer', customerId, 'UPDATE');
+  logAction(shopId, 'customer', customerId, 'UPDATE', null, actorUserId);
 
   return getCustomer(shopId, customerId);
 }
@@ -112,8 +114,9 @@ export function updateCustomer(shopId, customerId, data) {
  * Soft delete a customer
  * @param {string} shopId - Shop UUID
  * @param {string} customerId - Customer UUID
+ * @param {string} actorUserId - User performing the action
  */
-export function deleteCustomer(shopId, customerId) {
+export function deleteCustomer(shopId, customerId, actorUserId) {
   const db = getDatabase();
 
   const result = db.prepare(`
@@ -124,7 +127,7 @@ export function deleteCustomer(shopId, customerId) {
     throw new Error('Customer not found or already deleted');
   }
 
-  logAction(shopId, 'customer', customerId, 'DELETE');
+  logAction(shopId, 'customer', customerId, 'DELETE', null, actorUserId);
 }
 
 /**

@@ -67,7 +67,7 @@ router.put('/:key', adminOnly, (req, res, next) => {
             });
         }
 
-        setSetting(req.shopId, req.params.key, value);
+        setSetting(req.shopId, req.params.key, value, req.user.userId);
         res.json({ key: req.params.key, value });
     } catch (error) {
         next(error);

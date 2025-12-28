@@ -1,22 +1,17 @@
 // SECURITY: All queries in this service MUST be scoped by shopId
 
 import { getDatabase } from '../db/init.js';
+import { logAction } from './auditService.js';
 
 /**
  * Get a setting value for a shop
- * @param {string} shopId - Shop UUID
- * @param {string} key - Setting key
- * @returns {*} Parsed setting value or null
  */
 export function getSetting(shopId, key) {
     const db = getDatabase();
     const stmt = db.prepare('SELECT value_json FROM settings WHERE shop_id = ? AND key = ?');
     const result = stmt.get(shopId, key);
 
-    if (!result) {
-        return null;
-    }
-
+    if (!result) return null;
     return JSON.parse(result.value_json);
 }
 
@@ -24,9 +19,10 @@ export function getSetting(shopId, key) {
  * Set a setting value for a shop
  * @param {string} shopId - Shop UUID
  * @param {string} key - Setting key
- * @param {*} value - Value to store (will be JSON stringified)
+ * @param {*} value - Value to store
+ * @param {string} actorUserId - User performing the action
  */
-export function setSetting(shopId, key, value) {
+export function setSetting(shopId, key, value, actorUserId) {
     const db = getDatabase();
     const stmt = db.prepare(`
     INSERT INTO settings (shop_id, key, value_json) VALUES (?, ?, ?)
@@ -34,12 +30,11 @@ export function setSetting(shopId, key, value) {
   `);
 
     stmt.run(shopId, key, JSON.stringify(value));
+    logAction(shopId, 'setting', key, 'UPDATE', { value }, actorUserId);
 }
 
 /**
  * Get all settings for a shop
- * @param {string} shopId - Shop UUID
- * @returns {Object} Key-value pairs of all settings
  */
 export function getAllSettings(shopId) {
     const db = getDatabase();
@@ -58,9 +53,11 @@ export function getAllSettings(shopId) {
  * Delete a setting for a shop
  * @param {string} shopId - Shop UUID
  * @param {string} key - Setting key to delete
+ * @param {string} actorUserId - User performing the action
  */
-export function deleteSetting(shopId, key) {
+export function deleteSetting(shopId, key, actorUserId) {
     const db = getDatabase();
     const stmt = db.prepare('DELETE FROM settings WHERE shop_id = ? AND key = ?');
     stmt.run(shopId, key);
+    logAction(shopId, 'setting', key, 'DELETE', null, actorUserId);
 }

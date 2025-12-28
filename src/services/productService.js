@@ -8,8 +8,9 @@ import { logAction } from './auditService.js';
  * Create a new product
  * @param {string} shopId - Shop UUID
  * @param {Object} data - Product data
+ * @param {string} actorUserId - User performing the action
  */
-export function createProduct(shopId, data) {
+export function createProduct(shopId, data, actorUserId) {
     return transaction((db) => {
         const productId = generateUUID();
         const now = new Date().toISOString();
@@ -50,7 +51,7 @@ export function createProduct(shopId, data) {
             now
         );
 
-        logAction(shopId, 'product', productId, 'CREATE', { name: data.name });
+        logAction(shopId, 'product', productId, 'CREATE', { name: data.name }, actorUserId);
 
         return getProduct(shopId, productId);
     });
@@ -152,8 +153,9 @@ export function listProducts(shopId, filters = {}) {
  * @param {string} shopId - Shop UUID
  * @param {string} productId - Product UUID
  * @param {Object} data - Update data
+ * @param {string} actorUserId - User performing the action
  */
-export function updateProduct(shopId, productId, data) {
+export function updateProduct(shopId, productId, data, actorUserId) {
     const db = getDatabase();
     const now = new Date().toISOString();
 
@@ -196,7 +198,7 @@ export function updateProduct(shopId, productId, data) {
         throw new Error('Product not found');
     }
 
-    logAction(shopId, 'product', productId, 'UPDATE');
+    logAction(shopId, 'product', productId, 'UPDATE', null, actorUserId);
 
     return getProduct(shopId, productId);
 }
@@ -205,8 +207,9 @@ export function updateProduct(shopId, productId, data) {
  * Soft delete a product
  * @param {string} shopId - Shop UUID
  * @param {string} productId - Product UUID
+ * @param {string} actorUserId - User performing the action
  */
-export function deleteProduct(shopId, productId) {
+export function deleteProduct(shopId, productId, actorUserId) {
     const db = getDatabase();
 
     const result = db.prepare(`
@@ -217,7 +220,7 @@ export function deleteProduct(shopId, productId) {
         throw new Error('Product not found or already deleted');
     }
 
-    logAction(shopId, 'product', productId, 'DELETE');
+    logAction(shopId, 'product', productId, 'DELETE', null, actorUserId);
 }
 
 /**

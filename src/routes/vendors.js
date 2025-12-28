@@ -63,7 +63,7 @@ router.get('/:id', (req, res, next) => {
  */
 router.post('/', validate(schemas.vendor), (req, res, next) => {
     try {
-        const vendor = createVendor(req.shopId, req.body);
+        const vendor = createVendor(req.shopId, req.body, req.user.userId);
         res.status(201).json(vendor);
     } catch (error) {
         next(error);
@@ -79,7 +79,7 @@ router.post('/', validate(schemas.vendor), (req, res, next) => {
  */
 router.put('/:id', validate(schemas.vendor), (req, res, next) => {
     try {
-        const vendor = updateVendor(req.shopId, req.params.id, req.body);
+        const vendor = updateVendor(req.shopId, req.params.id, req.body, req.user.userId);
         res.json(vendor);
     } catch (error) {
         next(error);
@@ -95,7 +95,7 @@ router.put('/:id', validate(schemas.vendor), (req, res, next) => {
  */
 router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deleteVendor(req.shopId, req.params.id);
+        deleteVendor(req.shopId, req.params.id, req.user.userId);
         res.status(204).send();
     } catch (error) {
         next(error);

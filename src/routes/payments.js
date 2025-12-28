@@ -69,7 +69,7 @@ router.get('/:id', (req, res, next) => {
  */
 router.post('/', validate(schemas.payment), (req, res, next) => {
     try {
-        const payment = createPayment(req.shopId, req.body);
+        const payment = createPayment(req.shopId, req.body, req.user.userId);
         res.status(201).json(payment);
     } catch (error) {
         next(error);
@@ -85,7 +85,7 @@ router.post('/', validate(schemas.payment), (req, res, next) => {
  */
 router.delete('/:id', adminOnly, (req, res, next) => {
     try {
-        deletePayment(req.shopId, req.params.id);
+        deletePayment(req.shopId, req.params.id, req.user.userId);
         res.status(204).send();
     } catch (error) {
         next(error);

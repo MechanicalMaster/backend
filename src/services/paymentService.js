@@ -9,38 +9,26 @@ import { logAction } from './auditService.js';
 
 /**
  * Create a payment with allocations (TRANSACTIONAL)
- * Also updates customer/vendor balances and invoice statuses
- * 
  * @param {string} shopId - Shop UUID
  * @param {Object} data - Payment data
+ * @param {string} actorUserId - User performing the action
  * @returns {Object} Created payment
  */
-export function createPayment(shopId, data) {
+export function createPayment(shopId, data, actorUserId) {
     return transaction((db) => {
         const paymentId = generateUUID();
         const transactionNumber = generatePaymentNumber(shopId);
         const now = new Date().toISOString();
 
-        // 1. Insert payment
         db.prepare(`
       INSERT INTO payments (
         id, shop_id, transaction_number, date, type, party_type, party_id, amount, mode, notes, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-            paymentId,
-            shopId,
-            transactionNumber,
-            data.date,
-            data.type,
-            data.partyType,
-            data.partyId,
-            data.amount,
-            data.mode || null,
-            data.notes || null,
-            now
+            paymentId, shopId, transactionNumber, data.date, data.type,
+            data.partyType, data.partyId, data.amount, data.mode || null, data.notes || null, now
         );
 
-        // 2. Insert payment allocations
         if (data.allocations && data.allocations.length > 0) {
             const allocStmt = db.prepare(`
         INSERT INTO payment_allocations (id, payment_id, invoice_id, amount)
@@ -51,45 +39,37 @@ export function createPayment(shopId, data) {
                 allocStmt.run(generateUUID(), paymentId, alloc.invoiceId, alloc.amount);
             });
 
-            // 3. Update invoice statuses
             data.allocations.forEach(alloc => {
                 updateInvoiceStatus(db, shopId, alloc.invoiceId);
             });
         }
 
-        // 4. Recalculate party balance
         if (data.partyType === 'CUSTOMER') {
             updateCustomerBalance(shopId, data.partyId);
         } else if (data.partyType === 'VENDOR') {
             updateVendorBalance(shopId, data.partyId);
         }
 
-        logAction(shopId, 'payment', paymentId, 'CREATE', { transactionNumber });
+        logAction(shopId, 'payment', paymentId, 'CREATE', { transactionNumber }, actorUserId);
 
         return getPayment(shopId, paymentId);
     });
 }
 
 /**
- * Update invoice status based on payment allocations
- * Internal helper function
+ * Update invoice status based on payment allocations (internal helper)
  */
 function updateInvoiceStatus(db, shopId, invoiceId) {
-    // Get total invoice amount
     const invoice = db.prepare(`
-    SELECT it.grand_total
-    FROM invoices i
+    SELECT it.grand_total FROM invoices i
     JOIN invoice_totals it ON i.id = it.invoice_id
     WHERE i.id = ? AND i.shop_id = ?
   `).get(invoiceId, shopId);
 
     if (!invoice) return;
 
-    // Get total allocated payments
     const allocated = db.prepare(`
-    SELECT COALESCE(SUM(amount), 0) as total
-    FROM payment_allocations
-    WHERE invoice_id = ?
+    SELECT COALESCE(SUM(amount), 0) as total FROM payment_allocations WHERE invoice_id = ?
   `).get(invoiceId);
 
     const totalPaid = allocated.total;
@@ -111,8 +91,6 @@ function updateInvoiceStatus(db, shopId, invoiceId) {
 
 /**
  * Get a payment with allocations
- * @param {string} shopId - Shop UUID
- * @param {string} paymentId - Payment UUID
  */
 export function getPayment(shopId, paymentId) {
     const db = getDatabase();
@@ -127,16 +105,11 @@ export function getPayment(shopId, paymentId) {
     SELECT * FROM payment_allocations WHERE payment_id = ?
   `).all(paymentId);
 
-    return {
-        ...payment,
-        allocations
-    };
+    return { ...payment, allocations };
 }
 
 /**
  * List payments for a shop
- * @param {string} shopId - Shop UUID
- * @param {Object} filters - Optional filters
  */
 export function listPayments(shopId, filters = {}) {
     const db = getDatabase();
@@ -163,8 +136,9 @@ export function listPayments(shopId, filters = {}) {
  * Delete a payment and recalculate balances
  * @param {string} shopId - Shop UUID
  * @param {string} paymentId - Payment UUID
+ * @param {string} actorUserId - User performing the action
  */
-export function deletePayment(shopId, paymentId) {
+export function deletePayment(shopId, paymentId, actorUserId) {
     return transaction((db) => {
         const payment = db.prepare('SELECT * FROM payments WHERE id = ? AND shop_id = ?').get(paymentId, shopId);
 
@@ -172,29 +146,23 @@ export function deletePayment(shopId, paymentId) {
             throw new Error('Payment not found');
         }
 
-        // Get allocations before deleting
         const allocations = db.prepare(`
       SELECT invoice_id FROM payment_allocations WHERE payment_id = ?
     `).all(paymentId);
 
-        // Delete allocations
         db.prepare('DELETE FROM payment_allocations WHERE payment_id = ?').run(paymentId);
-
-        // Delete payment
         db.prepare('DELETE FROM payments WHERE id = ?').run(paymentId);
 
-        // Update affected invoice statuses
         allocations.forEach(alloc => {
             updateInvoiceStatus(db, shopId, alloc.invoice_id);
         });
 
-        // Recalculate party balance
         if (payment.party_type === 'CUSTOMER') {
             updateCustomerBalance(shopId, payment.party_id);
         } else if (payment.party_type === 'VENDOR') {
             updateVendorBalance(shopId, payment.party_id);
         }
 
-        logAction(shopId, 'payment', paymentId, 'DELETE');
+        logAction(shopId, 'payment', paymentId, 'DELETE', null, actorUserId);
     });
 }

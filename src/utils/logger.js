@@ -64,13 +64,17 @@ function createLoggerOptions() {
         // Base bindings for all logs
         base: {
             pid: process.pid
-        },
-        // Format error objects properly
-        formatters: {
-            level: (label) => ({ level: label }),
-            bindings: (bindings) => bindings
         }
     };
+
+    // Custom formatters only work with pino-pretty (dev mode)
+    // In production with transport.targets, we use default numeric levels
+    if (isDev) {
+        baseOptions.formatters = {
+            level: (label) => ({ level: label }),
+            bindings: (bindings) => bindings
+        };
+    }
 
     return baseOptions;
 }

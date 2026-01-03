@@ -5,6 +5,7 @@ backend/node_modules/
 # Environment variables
 .env
 backend/.env
+backend/.env.production
 
 # Local databases
 *.db

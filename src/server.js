@@ -8,7 +8,7 @@ import { logger, createHttpLogger } from './utils/logger.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
 import { setupAdminJS } from './admin/index.js';
-import { authRateLimiter, generalApiRateLimiter } from './middleware/rateLimiter.js';
+import { generalApiRateLimiter } from './middleware/rateLimiter.js';
 
 // Import routes
 import invoiceRoutes from './routes/invoices.js';
@@ -68,8 +68,9 @@ app.use(cors());
     // Apply general API rate limiting to all /api/* routes
     app.use('/api', generalApiRateLimiter);
 
-    // API routes with specific rate limiting for auth
-    app.use('/api/auth', authRateLimiter, authRoutes);
+    // API routes
+    // Note: strictAuthRateLimiter is applied within authRoutes for sensitive endpoints
+    app.use('/api/auth', authRoutes);
     app.use('/api/invoices', invoiceRoutes);
     app.use('/api/customers', customerRoutes);
     app.use('/api/products', productRoutes);

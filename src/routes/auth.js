@@ -2,6 +2,7 @@ import express from 'express';
 import { requestOTP, verifyOTP, getUser, createUser, listUsers } from '../services/userService.js';
 import { authenticateToken, adminOnly } from '../middleware/auth.js';
 import { injectShopScope } from '../middleware/shopScope.js';
+import { strictAuthRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ const router = express.Router();
  *       200:
  *         description: OTP requested
  */
-router.post('/request-otp', (req, res, next) => {
+router.post('/request-otp', strictAuthRateLimiter, (req, res, next) => {
     try {
         const { phone } = req.body;
 
@@ -76,7 +77,7 @@ router.post('/request-otp', (req, res, next) => {
  *                 user:
  *                   type: object
  */
-router.post('/verify-otp', (req, res, next) => {
+router.post('/verify-otp', strictAuthRateLimiter, (req, res, next) => {
     try {
         const { phone, otp } = req.body;
 
@@ -138,7 +139,7 @@ router.post('/verify-otp', (req, res, next) => {
  *       401:
  *         description: Invalid OTP
  */
-router.post('/login', (req, res, next) => {
+router.post('/login', strictAuthRateLimiter, (req, res, next) => {
     try {
         const { phone, otp } = req.body;
 

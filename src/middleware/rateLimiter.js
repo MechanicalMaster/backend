@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
  * Strict rate limiter for authentication endpoints
  * 10 requests per 10 minutes per IP address
  */
-export const authRateLimiter = rateLimit({
+export const strictAuthRateLimiter = rateLimit({
     windowMs: 10 * 60 * 1000, // 10 minutes
     max: 10, // Limit each IP to 10 requests per windowMs
     message: {

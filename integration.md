@@ -689,16 +689,34 @@ const createBackup = async () => {
   
   const { filename } = await response.json();
   
-  // 2. Trigger download
-  window.location.href = `/api/ops/backup/${filename}`;
+  // 2. Download using fetch (Authorization header required)
+  const downloadResponse = await fetch(`/api/ops/backup/${filename}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  
+  if (!downloadResponse.ok) {
+    throw new Error('Download failed');
+  }
+  
+  // 3. Trigger browser download from blob
+  const blob = await downloadResponse.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 };
 ```
+
+> ⚠️ **IMPORTANT:** Do NOT use `window.location.href` for the download. Browser navigation does not include the `Authorization` header, causing a 401 error. Always use `fetch()` with the token.
 
 **Best Practices:**
 1. Show loading state during backup creation (can take several seconds)
 2. Handle 409 errors gracefully (inform user, disable button)
 3. Automatically trigger download on successful backup creation
 4. Consider debouncing backup button clicks
+
 
 ---
 

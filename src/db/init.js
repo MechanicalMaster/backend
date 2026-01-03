@@ -23,15 +23,15 @@ export function initDatabase() {
 
     dbLogger.info({ path: config.databasePath }, 'Initializing database');
 
-    // Create database connection
-    db = new Database(config.databasePath);
+    // Create database connection with busy timeout to handle WAL contention
+    db = new Database(config.databasePath, { timeout: 5000 });
 
     // Apply critical SQLite settings
     db.pragma('journal_mode = WAL');
     db.pragma('synchronous = NORMAL');
     db.pragma('foreign_keys = ON');
 
-    dbLogger.info('Applied SQLite settings (WAL mode, foreign keys ON)');
+    dbLogger.info('Applied SQLite settings (WAL mode, foreign keys ON, timeout 5s)');
 
     // Read and execute schema
     const schemaPath = join(__dirname, 'schema.sql');

@@ -3,6 +3,7 @@
 import { getDatabase } from '../db/init.js';
 import { generateUUID } from '../utils/uuid.js';
 import { logAction } from './auditService.js';
+import { sanitizeString } from '../utils/sanitize.js';
 
 /**
  * Create a new category
@@ -14,11 +15,14 @@ export function createCategory(shopId, data, actorUserId) {
     const db = getDatabase();
     const categoryId = generateUUID();
 
+    // Sanitize name to prevent XSS
+    const sanitizedName = sanitizeString(data.name);
+
     db.prepare(`
     INSERT INTO categories (id, shop_id, name, type) VALUES (?, ?, ?, ?)
-  `).run(categoryId, shopId, data.name, data.type);
+  `).run(categoryId, shopId, sanitizedName, data.type);
 
-    logAction(shopId, 'category', categoryId, 'CREATE', { name: data.name }, actorUserId);
+    logAction(shopId, 'category', categoryId, 'CREATE', { name: sanitizedName }, actorUserId);
 
     return getCategory(shopId, categoryId);
 }
@@ -63,9 +67,13 @@ export function listCategories(shopId) {
  */
 export function updateCategory(shopId, categoryId, data, actorUserId) {
     const db = getDatabase();
+
+    // Sanitize name to prevent XSS
+    const sanitizedName = sanitizeString(data.name);
+
     const result = db.prepare(
         'UPDATE categories SET name = ?, type = ? WHERE id = ? AND shop_id = ?'
-    ).run(data.name, data.type, categoryId, shopId);
+    ).run(sanitizedName, data.type, categoryId, shopId);
 
     if (result.changes === 0) throw new Error('Category not found');
     logAction(shopId, 'category', categoryId, 'UPDATE', null, actorUserId);
@@ -104,13 +112,16 @@ export function createSubcategory(shopId, categoryId, data, actorUserId) {
 
     const subcategoryId = generateUUID();
 
+    // Sanitize name to prevent XSS
+    const sanitizedName = sanitizeString(data.name);
+
     db.prepare(`
     INSERT INTO subcategories (id, category_id, name) VALUES (?, ?, ?)
-  `).run(subcategoryId, categoryId, data.name);
+  `).run(subcategoryId, categoryId, sanitizedName);
 
-    logAction(shopId, 'subcategory', subcategoryId, 'CREATE', { name: data.name }, actorUserId);
+    logAction(shopId, 'subcategory', subcategoryId, 'CREATE', { name: sanitizedName }, actorUserId);
 
-    return { id: subcategoryId, category_id: categoryId, name: data.name };
+    return { id: subcategoryId, category_id: categoryId, name: sanitizedName };
 }
 
 /**

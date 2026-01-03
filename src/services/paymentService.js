@@ -7,6 +7,7 @@ import { updateCustomerBalance } from './customerService.js';
 import { updateVendorBalance } from './vendorService.js';
 import { logAction } from './auditService.js';
 import { bustHomeCache } from '../routes/home.js';
+import { sanitizeString } from '../utils/sanitize.js';
 
 /**
  * Create a payment with allocations (TRANSACTIONAL)
@@ -21,13 +22,18 @@ export function createPayment(shopId, data, actorUserId) {
         const transactionNumber = generatePaymentNumber(shopId);
         const now = new Date().toISOString();
 
+        const amountPaisa = Math.round(data.amount * 100);
+
+        // Sanitize notes to prevent XSS
+        const sanitizedNotes = sanitizeString(data.notes);
+
         db.prepare(`
       INSERT INTO payments (
-        id, shop_id, transaction_number, date, type, party_type, party_id, amount, mode, notes, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, shop_id, transaction_number, date, type, party_type, party_id, amount_paisa, amount, mode, notes, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
             paymentId, shopId, transactionNumber, data.date, data.type,
-            data.partyType, data.partyId, data.amount, data.mode || null, data.notes || null, now
+            data.partyType, data.partyId, amountPaisa, data.amount, data.mode || null, sanitizedNotes || null, now
         );
 
         if (data.allocations && data.allocations.length > 0) {
@@ -63,7 +69,7 @@ export function createPayment(shopId, data, actorUserId) {
  */
 function updateInvoiceStatus(db, shopId, invoiceId) {
     const invoice = db.prepare(`
-    SELECT it.grand_total FROM invoices i
+    SELECT it.grand_total_paisa FROM invoices i
     JOIN invoice_totals it ON i.id = it.invoice_id
     WHERE i.id = ? AND i.shop_id = ?
   `).get(invoiceId, shopId);
@@ -74,13 +80,14 @@ function updateInvoiceStatus(db, shopId, invoiceId) {
     SELECT COALESCE(SUM(amount), 0) as total FROM payment_allocations WHERE invoice_id = ?
   `).get(invoiceId);
 
-    const totalPaid = allocated.total;
-    const grandTotal = invoice.grand_total;
+    // Convert allocated amount to paisa for comparison
+    const totalPaidPaisa = Math.round(allocated.total * 100);
+    const grandTotalPaisa = invoice.grand_total_paisa;
 
     let status;
-    if (totalPaid >= grandTotal) {
+    if (totalPaidPaisa >= grandTotalPaisa) {
         status = 'PAID';
-    } else if (totalPaid > 0) {
+    } else if (totalPaidPaisa > 0) {
         status = 'PARTIAL';
     } else {
         status = 'UNPAID';

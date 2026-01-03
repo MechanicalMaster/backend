@@ -3,10 +3,11 @@
 import { getDatabase, transaction } from '../db/init.js';
 import { generateUUID } from '../utils/uuid.js';
 import { generateInvoiceNumber } from './sequenceService.js';
-import { calculateInvoiceTotals } from '../utils/calculator.js';
+import { calculateInvoiceTotals, toRupees } from '../utils/calculator.js';
 import { assembleInvoiceAggregate, decomposeInvoiceAggregate } from '../models/InvoiceAggregate.js';
 import { logAction } from './auditService.js';
 import { bustHomeCache } from '../routes/home.js';
+import { sanitizeString } from '../utils/sanitize.js';
 
 /**
  * Assemble a complete invoice aggregate from database
@@ -73,6 +74,16 @@ export function createInvoice(shopId, aggregatePayload, requestId = null, actorU
       totals: computedTotals
     });
 
+    // Sanitize customer snapshot fields to prevent XSS
+    const sanitizedCustomerName = sanitizeString(decomposed.customerSnapshot.name);
+    const sanitizedCustomerAddress = decomposed.customerSnapshot.address_json;
+
+    // Sanitize item descriptions
+    const sanitizedItems = decomposed.items.map(item => ({
+      ...item,
+      description: sanitizeString(item.description)
+    }));
+
     db.prepare(`
       INSERT INTO invoices (
         id, shop_id, invoice_number, customer_id, type, status, date, due_date, 
@@ -89,25 +100,35 @@ export function createInvoice(shopId, aggregatePayload, requestId = null, actorU
     db.prepare(`
       INSERT INTO invoice_customer_snapshot (invoice_id, name, phone, gstin, address_json)
       VALUES (?, ?, ?, ?, ?)
-    `).run(invoiceId, decomposed.customerSnapshot.name, decomposed.customerSnapshot.phone,
-      decomposed.customerSnapshot.gstin, decomposed.customerSnapshot.address_json);
+    `).run(invoiceId, sanitizedCustomerName, decomposed.customerSnapshot.phone,
+      decomposed.customerSnapshot.gstin, sanitizedCustomerAddress);
 
     const itemStmt = db.prepare(`
       INSERT INTO invoice_items (id, invoice_id, product_id, description, quantity, rate, tax_rate, weight_json, amount_json)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    decomposed.items.forEach(item => {
+    sanitizedItems.forEach(item => {
       itemStmt.run(generateUUID(), invoiceId, item.product_id, item.description,
         item.quantity, item.rate, item.tax_rate, item.weight_json, item.amount_json);
     });
 
     db.prepare(`
-      INSERT INTO invoice_totals (invoice_id, subtotal, tax_total, cgst, sgst, igst, round_off, grand_total)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(invoiceId, computedTotals.subtotal, computedTotals.taxTotal,
-      computedTotals.cgst, computedTotals.sgst, computedTotals.igst,
-      computedTotals.roundOff, computedTotals.grandTotal);
+      INSERT INTO invoice_totals (
+        invoice_id,
+        subtotal_paisa, tax_total_paisa, cgst_paisa, sgst_paisa, igst_paisa, round_off_paisa, grand_total_paisa,
+        subtotal, tax_total, cgst, sgst, igst, round_off, grand_total
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      invoiceId,
+      computedTotals.subtotalPaisa, computedTotals.taxTotalPaisa,
+      computedTotals.cgstPaisa, computedTotals.sgstPaisa, computedTotals.igstPaisa,
+      computedTotals.roundOffPaisa, computedTotals.grandTotalPaisa,
+      toRupees(computedTotals.subtotalPaisa), toRupees(computedTotals.taxTotalPaisa),
+      toRupees(computedTotals.cgstPaisa), toRupees(computedTotals.sgstPaisa),
+      toRupees(computedTotals.igstPaisa), toRupees(computedTotals.roundOffPaisa),
+      toRupees(computedTotals.grandTotalPaisa)
+    );
 
     if (requestId) {
       db.prepare(`
@@ -148,6 +169,16 @@ export function updateInvoice(shopId, invoiceId, aggregatePayload, actorUserId) 
 
     const decomposed = decomposeInvoiceAggregate(aggregatePayload, { totals: computedTotals });
 
+    // Sanitize customer snapshot fields to prevent XSS
+    const sanitizedCustomerName = sanitizeString(decomposed.customerSnapshot.name);
+    const sanitizedCustomerAddress = decomposed.customerSnapshot.address_json;
+
+    // Sanitize item descriptions
+    const sanitizedItems = decomposed.items.map(item => ({
+      ...item,
+      description: sanitizeString(item.description)
+    }));
+
     db.prepare(`
       UPDATE invoices SET customer_id = ?, type = ?, status = ?, date = ?, due_date = ?,
           place_of_supply = ?, updated_at = ? WHERE id = ? AND shop_id = ?
@@ -159,26 +190,36 @@ export function updateInvoice(shopId, invoiceId, aggregatePayload, actorUserId) 
     db.prepare(`
       INSERT INTO invoice_customer_snapshot (invoice_id, name, phone, gstin, address_json)
       VALUES (?, ?, ?, ?, ?)
-    `).run(invoiceId, decomposed.customerSnapshot.name, decomposed.customerSnapshot.phone,
-      decomposed.customerSnapshot.gstin, decomposed.customerSnapshot.address_json);
+    `).run(invoiceId, sanitizedCustomerName, decomposed.customerSnapshot.phone,
+      decomposed.customerSnapshot.gstin, sanitizedCustomerAddress);
 
     db.prepare('DELETE FROM invoice_items WHERE invoice_id = ?').run(invoiceId);
     const itemStmt = db.prepare(`
       INSERT INTO invoice_items (id, invoice_id, product_id, description, quantity, rate, tax_rate, weight_json, amount_json)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    decomposed.items.forEach(item => {
+    sanitizedItems.forEach(item => {
       itemStmt.run(generateUUID(), invoiceId, item.product_id, item.description,
         item.quantity, item.rate, item.tax_rate, item.weight_json, item.amount_json);
     });
 
     db.prepare('DELETE FROM invoice_totals WHERE invoice_id = ?').run(invoiceId);
     db.prepare(`
-      INSERT INTO invoice_totals (invoice_id, subtotal, tax_total, cgst, sgst, igst, round_off, grand_total)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(invoiceId, computedTotals.subtotal, computedTotals.taxTotal,
-      computedTotals.cgst, computedTotals.sgst, computedTotals.igst,
-      computedTotals.roundOff, computedTotals.grandTotal);
+      INSERT INTO invoice_totals (
+        invoice_id,
+        subtotal_paisa, tax_total_paisa, cgst_paisa, sgst_paisa, igst_paisa, round_off_paisa, grand_total_paisa,
+        subtotal, tax_total, cgst, sgst, igst, round_off, grand_total
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      invoiceId,
+      computedTotals.subtotalPaisa, computedTotals.taxTotalPaisa,
+      computedTotals.cgstPaisa, computedTotals.sgstPaisa, computedTotals.igstPaisa,
+      computedTotals.roundOffPaisa, computedTotals.grandTotalPaisa,
+      toRupees(computedTotals.subtotalPaisa), toRupees(computedTotals.taxTotalPaisa),
+      toRupees(computedTotals.cgstPaisa), toRupees(computedTotals.sgstPaisa),
+      toRupees(computedTotals.igstPaisa), toRupees(computedTotals.roundOffPaisa),
+      toRupees(computedTotals.grandTotalPaisa)
+    );
 
     logAction(shopId, 'invoice', invoiceId, 'UPDATE', null, actorUserId);
     bustHomeCache(shopId);

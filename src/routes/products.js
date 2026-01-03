@@ -1,5 +1,4 @@
 import express from 'express';
-import multer from 'multer';
 import {
     createProduct,
     getProduct,
@@ -13,9 +12,9 @@ import { savePhoto, deletePhoto } from '../services/fileService.js';
 import { validate, schemas } from '../middleware/validator.js';
 import { authenticateToken, adminOnly } from '../middleware/auth.js';
 import { injectShopScope } from '../middleware/shopScope.js';
+import { upload } from '../utils/upload.js';
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
 // All routes require authentication and shop scope
 router.use(authenticateToken);
@@ -130,11 +129,25 @@ router.post('/:id/images', upload.single('image'), (req, res, next) => {
             });
         }
 
-        const { filePath, checksum } = savePhoto(req.file.buffer, req.file.originalname);
+        // File already on disk from multer, just get metadata
+        const { filePath, checksum } = savePhoto(req.file.filename);
         const image = addProductImage(req.shopId, req.params.id, filePath, checksum);
 
         res.status(201).json(image);
     } catch (error) {
+        // Handle multer errors (file too large, wrong type, etc.)
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({
+                error: 'File too large. Maximum size is 5MB',
+                requestId: req.requestId
+            });
+        }
+        if (error.code === 'INVALID_FILE_TYPE') {
+            return res.status(400).json({
+                error: 'Only image files are allowed',
+                requestId: req.requestId
+            });
+        }
         next(error);
     }
 });

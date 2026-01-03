@@ -1,7 +1,6 @@
-import { writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, unlinkSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { config } from '../config/index.js';
-import { generateShortId } from '../utils/uuid.js';
 import { calculateChecksum } from '../utils/checksum.js';
 import { createChildLogger } from '../utils/logger.js';
 
@@ -15,24 +14,20 @@ if (!existsSync(config.storagePath)) {
 
 /**
  * Save a photo file to disk
+ * File is already on disk from multer diskStorage
+ * This function just calculates checksum and returns metadata
  * 
- * @param {Buffer} buffer - File buffer
- * @param {string} originalName - Original filename (for extension)
+ * @param {string} filename - Filename (already on disk in uploads/)
  * @returns {Object} { filePath, checksum }
  */
-export function savePhoto(buffer, originalName = 'photo.jpg') {
-    // Extract extension
-    const ext = originalName.split('.').pop() || 'jpg';
+export function savePhoto(filename) {
+    // File already written by multer to uploads/ directory
+    const absolutePath = join(config.storagePath, 'uploads', filename);
 
-    // Generate unique filename
-    const filename = `${generateShortId()}.${ext}`;
-    const filePath = join(config.storagePath, filename);
-
-    // Calculate checksum
+    // Read file to calculate checksum
+    // Note: readFileSync is acceptable here - only called once per upload
+    const buffer = readFileSync(absolutePath);
     const checksum = calculateChecksum(buffer);
-
-    // Write to disk
-    writeFileSync(filePath, buffer);
 
     // Return relative path (never expose absolute path to client)
     return {
@@ -49,7 +44,7 @@ export function savePhoto(buffer, originalName = 'photo.jpg') {
  * @returns {string} Absolute path
  */
 export function getAbsolutePath(filename) {
-    return join(config.storagePath, filename);
+    return join(config.storagePath, 'uploads', filename);
 }
 
 /**

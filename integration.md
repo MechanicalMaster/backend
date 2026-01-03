@@ -12,6 +12,59 @@ Complete API documentation for frontend integration with the Swipe Store Backend
 
 ---
 
+## Security Features
+
+### Rate Limiting
+
+The API implements rate limiting to protect against abuse:
+
+**Auth Endpoints** (`/api/auth/*`):
+- Limit: **10 requests per 10 minutes** per IP address
+- Applies to: OTP requests, login, verification
+- Headers: `RateLimit-*` standard headers included
+
+**General API** (`/api/*`):
+- Limit: **100 requests per 15 minutes** per IP address
+- Applies to: All authenticated endpoints
+- AdminJS routes are excluded from rate limiting
+
+**Rate Limit Response (429):**
+```json
+{
+  "error": "Too many requests from this IP, please try again later.",
+  "requestId": "uuid"
+}
+```
+
+The response includes a `Retry-After` header indicating seconds until the limit resets.
+
+### Input Sanitization
+
+All user-submitted text fields are automatically sanitized to prevent stored XSS attacks:
+
+**Sanitized Fields:**
+- Customer/Vendor: `name`, `address`
+- Product: `name`, `description`, `vendorRef`, `hallmarkCert`
+- Invoice: Customer snapshot `name`, item `description`
+- Payment: `notes`
+- Category: `name`
+
+**Not Sanitized** (validated by type):
+- IDs, UUIDs, numbers, dates, phone, email, GSTIN, enums, SKUs, barcodes
+
+HTML tags are stripped from sanitized fields before storage. This happens transparently; no changes are required to request/response formats.
+
+### Database Resilience
+
+The SQLite database is configured with:
+- **WAL mode** for concurrent read/write performance
+- **5-second busy timeout** to automatically handle database lock contention
+- Automatic retries when multiple users write simultaneously
+
+
+
+---
+
 ## Multi-User Architecture
 
 ### Shop (Tenant) Model
@@ -230,6 +283,19 @@ Soft delete.
 ### POST `/api/invoices/:id/photos`
 Upload photo (multipart/form-data, field: `photo`).
 
+**Limits:**
+- Max file size: **5MB**
+- Allowed types: `image/*` only
+
+**Error Responses:**
+```json
+// 400: File too large
+{ "error": "File too large. Maximum size is 5MB" }
+
+// 400: Invalid type
+{ "error": "Only image files are allowed" }
+```
+
 ### DELETE `/api/invoices/:invoiceId/photos/:photoId`
 
 ---
@@ -314,6 +380,19 @@ POST /api/products/:id/images
 Content-Type: multipart/form-data
 
 image: <binary file>   ← field name must be "image"
+```
+
+**Limits:**
+- Max file size: **5MB**
+- Allowed types: `image/*` only
+
+**Error Responses:**
+```json
+// 400: File too large
+{ "error": "File too large. Maximum size is 5MB" }
+
+// 400: Invalid type
+{ "error": "Only image files are allowed" }
 ```
 
 #### Response from GET `/api/products/:id`
@@ -506,9 +585,125 @@ Returns complete home screen data as a single deterministic snapshot.
 - **NEVER** compute totals, percentages, or filters in UI
 - All business logic is backend-owned
 
+
+---
+
+## Operations (Backup & Restore)
+
+The operations endpoints provide manual backup functionality for local data safety.
+
+### POST `/api/ops/backup` *(Auth Required)*
+
+Create a full backup of the database and file storage as a single ZIP file.
+
+**Security:**
+- Requires authentication
+- Prevents concurrent backups (409 Conflict if backup already running)
+- Logs all backup creation to audit trail
+
+**Request:**
+```http
+POST /api/ops/backup
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "filename": "swipe_backup_2026-01-03T14-30-00-000Z.zip",
+  "sizeBytes": 1234567,
+  "createdAt": "2026-01-03T14:30:00.000Z"
+}
+```
+
+**Response (409 Conflict):**
+```json
+{
+  "error": "Backup already in progress",
+  "requestId": "uuid"
+}
+```
+
+**Backup Contents:**
+- SQLite database (`swipe.db`)
+- All file storage (`storage/photos/`)
+- Packaged as a single timestamped ZIP file
+
+**Storage Location:** `storage/backups/`
+
+---
+
+### GET `/api/ops/backup/:filename` *(Auth Required)*
+
+Download a previously created backup ZIP file.
+
+**Security:**
+- Requires authentication
+- Strict filename validation (prevents path traversal attacks)
+- Only allows filenames matching pattern: `swipe_backup_<timestamp>.zip`
+
+**Request:**
+```http
+GET /api/ops/backup/swipe_backup_2026-01-03T14-30-00-000Z.zip
+Authorization: Bearer <token>
+```
+
+**Response (200 OK):**
+- Binary ZIP file download
+- Content-Disposition header set for automatic download
+
+**Response (400 Bad Request):**
+```json
+{
+  "error": "Invalid backup filename",
+  "requestId": "uuid"
+}
+```
+
+**Response (404 Not Found):**
+```json
+{
+  "error": "Backup file not found",
+  "requestId": "uuid"
+}
+```
+
+**Frontend Integration Example:**
+```javascript
+// 1. Create backup
+const createBackup = async () => {
+  const response = await fetch('/api/ops/backup', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (response.status === 409) {
+    alert('Backup already in progress');
+    return;
+  }
+  
+  const { filename } = await response.json();
+  
+  // 2. Trigger download
+  window.location.href = `/api/ops/backup/${filename}`;
+};
+```
+
+**Best Practices:**
+1. Show loading state during backup creation (can take several seconds)
+2. Handle 409 errors gracefully (inform user, disable button)
+3. Automatically trigger download on successful backup creation
+4. Consider debouncing backup button clicks
+
 ---
 
 ## Error Responses
+
 
 ```json
 {

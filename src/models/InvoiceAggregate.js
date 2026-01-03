@@ -12,6 +12,8 @@
  * - invoice_photos
  */
 
+import { toRupees } from '../utils/calculator.js';
+
 /**
  * Create an invoice aggregate object from database rows
  * This is the READ assembly operation
@@ -53,13 +55,13 @@ export function assembleInvoiceAggregate(invoice, customer, items, totals, photo
         })),
 
         totals: totals ? {
-            subtotal: totals.subtotal,
-            taxTotal: totals.tax_total,
-            cgst: totals.cgst,
-            sgst: totals.sgst,
-            igst: totals.igst,
-            roundOff: totals.round_off,
-            grandTotal: totals.grand_total
+            subtotal: toRupees(totals.subtotal_paisa),
+            taxTotal: toRupees(totals.tax_total_paisa),
+            cgst: toRupees(totals.cgst_paisa),
+            sgst: toRupees(totals.sgst_paisa),
+            igst: toRupees(totals.igst_paisa),
+            roundOff: toRupees(totals.round_off_paisa),
+            grandTotal: toRupees(totals.grand_total_paisa)
         } : null,
 
         photos: photos.map(photo => ({

@@ -2,8 +2,9 @@
 
 import { getDatabase } from '../db/init.js';
 import { generateUUID } from '../utils/uuid.js';
-import { recalculateBalance } from '../utils/calculator.js';
+import { recalculateBalance, toRupees } from '../utils/calculator.js';
 import { logAction } from './auditService.js';
+import { sanitizeString } from '../utils/sanitize.js';
 
 /**
  * Create a new vendor
@@ -16,23 +17,30 @@ export function createVendor(shopId, data, actorUserId) {
   const vendorId = generateUUID();
   const now = new Date().toISOString();
 
+  // Sanitize user input to prevent XSS
+  const sanitizedName = sanitizeString(data.name);
+  const sanitizedAddress = typeof data.address === 'string'
+    ? sanitizeString(data.address)
+    : data.address;
+
   db.prepare(`
-    INSERT INTO vendors (id, shop_id, name, gstin, phone, email, balance, address_json, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO vendors (id, shop_id, name, gstin, phone, email, balance, balance_paisa, address_json, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     vendorId,
     shopId,
-    data.name,
+    sanitizedName,
     data.gstin || null,
     data.phone || null,
     data.email || null,
-    0,
-    data.address ? JSON.stringify(data.address) : null,
+    0, // Initial balance
+    0, // Initial balance_paisa
+    sanitizedAddress ? JSON.stringify(sanitizedAddress) : null,
     now,
     now
   );
 
-  logAction(shopId, 'vendor', vendorId, 'CREATE', { name: data.name }, actorUserId);
+  logAction(shopId, 'vendor', vendorId, 'CREATE', { name: sanitizedName }, actorUserId);
 
   return getVendor(shopId, vendorId);
 }
@@ -52,6 +60,7 @@ export function getVendor(shopId, vendorId) {
 
   return {
     ...vendor,
+    balance: toRupees(vendor.balance_paisa || 0), // Serialize to decimal
     address: vendor.address_json ? JSON.parse(vendor.address_json) : null
   };
 }
@@ -68,6 +77,7 @@ export function listVendors(shopId) {
 
   return vendors.map(v => ({
     ...v,
+    balance: toRupees(v.balance_paisa || 0), // Serialize to decimal
     address: v.address_json ? JSON.parse(v.address_json) : null
   }));
 }
@@ -83,16 +93,22 @@ export function updateVendor(shopId, vendorId, data, actorUserId) {
   const db = getDatabase();
   const now = new Date().toISOString();
 
+  // Sanitize user input to prevent XSS
+  const sanitizedName = sanitizeString(data.name);
+  const sanitizedAddress = typeof data.address === 'string'
+    ? sanitizeString(data.address)
+    : data.address;
+
   const result = db.prepare(`
     UPDATE vendors
     SET name = ?, gstin = ?, phone = ?, email = ?, address_json = ?, updated_at = ?
     WHERE id = ? AND shop_id = ? AND deleted_at IS NULL
   `).run(
-    data.name,
+    sanitizedName,
     data.gstin || null,
     data.phone || null,
     data.email || null,
-    data.address ? JSON.stringify(data.address) : null,
+    sanitizedAddress ? JSON.stringify(sanitizedAddress) : null,
     now,
     vendorId,
     shopId
@@ -130,11 +146,11 @@ export function deleteVendor(shopId, vendorId, actorUserId) {
 export function updateVendorBalance(shopId, vendorId) {
   const db = getDatabase();
 
-  const balance = recalculateBalance(db, vendorId, 'VENDOR');
+  const balancePaisa = recalculateBalance(db, vendorId, 'VENDOR');
 
   db.prepare(`
-    UPDATE vendors SET balance = ? WHERE id = ? AND shop_id = ?
-  `).run(balance, vendorId, shopId);
+    UPDATE vendors SET balance_paisa = ?, balance = ? WHERE id = ? AND shop_id = ?
+  `).run(balancePaisa, toRupees(balancePaisa), vendorId, shopId);
 
-  return balance;
+  return balancePaisa;
 }

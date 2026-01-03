@@ -2,8 +2,9 @@
 
 import { getDatabase } from '../db/init.js';
 import { generateUUID } from '../utils/uuid.js';
-import { recalculateBalance } from '../utils/calculator.js';
+import { recalculateBalance, toRupees } from '../utils/calculator.js';
 import { logAction } from './auditService.js';
+import { sanitizeString } from '../utils/sanitize.js';
 
 /**
  * Create a new customer
@@ -16,24 +17,31 @@ export function createCustomer(shopId, data, actorUserId) {
   const customerId = generateUUID();
   const now = new Date().toISOString();
 
+  // Sanitize user input to prevent XSS
+  const sanitizedName = sanitizeString(data.name);
+  const sanitizedAddress = typeof data.address === 'string'
+    ? sanitizeString(data.address)
+    : data.address;
+
   db.prepare(`
     INSERT INTO customers (
-      id, shop_id, name, gstin, phone, email, balance, address_json, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, shop_id, name, gstin, phone, email, balance, balance_paisa, address_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     customerId,
     shopId,
-    data.name,
+    sanitizedName,
     data.gstin || null,
     data.phone || null,
     data.email || null,
     0, // Initial balance
-    data.address ? JSON.stringify(data.address) : null,
+    0, // Initial balance_paisa
+    sanitizedAddress ? JSON.stringify(sanitizedAddress) : null,
     now,
     now
   );
 
-  logAction(shopId, 'customer', customerId, 'CREATE', { name: data.name }, actorUserId);
+  logAction(shopId, 'customer', customerId, 'CREATE', { name: sanitizedName }, actorUserId);
 
   return getCustomer(shopId, customerId);
 }
@@ -54,6 +62,7 @@ export function getCustomer(shopId, customerId) {
 
   return {
     ...customer,
+    balance: toRupees(customer.balance_paisa || 0), // Serialize to decimal
     address: customer.address_json ? JSON.parse(customer.address_json) : null
   };
 }
@@ -71,6 +80,7 @@ export function listCustomers(shopId) {
 
   return customers.map(c => ({
     ...c,
+    balance: toRupees(c.balance_paisa || 0), // Serialize to decimal
     address: c.address_json ? JSON.parse(c.address_json) : null
   }));
 }
@@ -86,16 +96,22 @@ export function updateCustomer(shopId, customerId, data, actorUserId) {
   const db = getDatabase();
   const now = new Date().toISOString();
 
+  // Sanitize user input to prevent XSS
+  const sanitizedName = sanitizeString(data.name);
+  const sanitizedAddress = typeof data.address === 'string'
+    ? sanitizeString(data.address)
+    : data.address;
+
   const result = db.prepare(`
     UPDATE customers
     SET name = ?, gstin = ?, phone = ?, email = ?, address_json = ?, updated_at = ?
     WHERE id = ? AND shop_id = ? AND deleted_at IS NULL
   `).run(
-    data.name,
+    sanitizedName,
     data.gstin || null,
     data.phone || null,
     data.email || null,
-    data.address ? JSON.stringify(data.address) : null,
+    sanitizedAddress ? JSON.stringify(sanitizedAddress) : null,
     now,
     customerId,
     shopId
@@ -138,11 +154,11 @@ export function deleteCustomer(shopId, customerId, actorUserId) {
 export function updateCustomerBalance(shopId, customerId) {
   const db = getDatabase();
 
-  const balance = recalculateBalance(db, customerId, 'CUSTOMER');
+  const balancePaisa = recalculateBalance(db, customerId, 'CUSTOMER');
 
   db.prepare(`
-    UPDATE customers SET balance = ? WHERE id = ? AND shop_id = ?
-  `).run(balance, customerId, shopId);
+    UPDATE customers SET balance_paisa = ?, balance = ? WHERE id = ? AND shop_id = ?
+  `).run(balancePaisa, toRupees(balancePaisa), customerId, shopId);
 
-  return balance;
+  return balancePaisa;
 }

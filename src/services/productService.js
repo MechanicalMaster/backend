@@ -3,6 +3,7 @@
 import { getDatabase, transaction } from '../db/init.js';
 import { generateUUID } from '../utils/uuid.js';
 import { logAction } from './auditService.js';
+import { sanitizeString } from '../utils/sanitize.js';
 
 /**
  * Create a new product
@@ -14,6 +15,12 @@ export function createProduct(shopId, data, actorUserId) {
     return transaction((db) => {
         const productId = generateUUID();
         const now = new Date().toISOString();
+
+        // Sanitize user input to prevent XSS
+        const sanitizedName = sanitizeString(data.name);
+        const sanitizedDescription = sanitizeString(data.description);
+        const sanitizedVendorRef = sanitizeString(data.vendorRef);
+        const sanitizedHallmarkCert = sanitizeString(data.hallmarkCert);
 
         db.prepare(`
       INSERT INTO products (
@@ -27,13 +34,13 @@ export function createProduct(shopId, data, actorUserId) {
             productId,
             shopId,
             data.type,
-            data.name,
+            sanitizedName,
             data.sku || null,
             data.barcode || null,
             data.hsn || null,
             data.categoryId || null,
             data.subcategoryId || null,
-            data.description || null,
+            sanitizedDescription || null,
             data.sellingPrice || null,
             data.purchasePrice || null,
             data.taxRate || null,
@@ -41,9 +48,9 @@ export function createProduct(shopId, data, actorUserId) {
             data.metal ? JSON.stringify(data.metal) : null,
             data.gemstone ? JSON.stringify(data.gemstone) : null,
             data.design ? JSON.stringify(data.design) : null,
-            data.vendorRef || null,
+            sanitizedVendorRef || null,
             data.procurementDate || null,
-            data.hallmarkCert || null,
+            sanitizedHallmarkCert || null,
             data.launchDate || null,
             data.showOnline ? 1 : 0,
             data.notForSale ? 1 : 0,
@@ -51,7 +58,7 @@ export function createProduct(shopId, data, actorUserId) {
             now
         );
 
-        logAction(shopId, 'product', productId, 'CREATE', { name: data.name }, actorUserId);
+        logAction(shopId, 'product', productId, 'CREATE', { name: sanitizedName }, actorUserId);
 
         return getProduct(shopId, productId);
     });
@@ -159,6 +166,12 @@ export function updateProduct(shopId, productId, data, actorUserId) {
     const db = getDatabase();
     const now = new Date().toISOString();
 
+    // Sanitize user input to prevent XSS
+    const sanitizedName = sanitizeString(data.name);
+    const sanitizedDescription = sanitizeString(data.description);
+    const sanitizedVendorRef = sanitizeString(data.vendorRef);
+    const sanitizedHallmarkCert = sanitizeString(data.hallmarkCert);
+
     const result = db.prepare(`
     UPDATE products
     SET type = ?, name = ?, sku = ?, barcode = ?, hsn = ?, category_id = ?, 
@@ -169,13 +182,13 @@ export function updateProduct(shopId, productId, data, actorUserId) {
     WHERE id = ? AND shop_id = ? AND deleted_at IS NULL
   `).run(
         data.type,
-        data.name,
+        sanitizedName,
         data.sku || null,
         data.barcode || null,
         data.hsn || null,
         data.categoryId || null,
         data.subcategoryId || null,
-        data.description || null,
+        sanitizedDescription || null,
         data.sellingPrice || null,
         data.purchasePrice || null,
         data.taxRate || null,
@@ -183,9 +196,9 @@ export function updateProduct(shopId, productId, data, actorUserId) {
         data.metal ? JSON.stringify(data.metal) : null,
         data.gemstone ? JSON.stringify(data.gemstone) : null,
         data.design ? JSON.stringify(data.design) : null,
-        data.vendorRef || null,
+        sanitizedVendorRef || null,
         data.procurementDate || null,
-        data.hallmarkCert || null,
+        sanitizedHallmarkCert || null,
         data.launchDate || null,
         data.showOnline ? 1 : 0,
         data.notForSale ? 1 : 0,

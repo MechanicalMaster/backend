@@ -4,6 +4,7 @@ import { getDatabase, transaction } from '../db/init.js';
 import { generateUUID } from '../utils/uuid.js';
 import { generatePurchaseNumber } from './sequenceService.js';
 import { logAction } from './auditService.js';
+import { bustHomeCache } from '../routes/home.js';
 
 /**
  * Create a new purchase
@@ -27,6 +28,7 @@ export function createPurchase(shopId, data, actorUserId) {
         );
 
         logAction(shopId, 'purchase', purchaseId, 'CREATE', { purchaseNumber }, actorUserId);
+        bustHomeCache(shopId);
         return getPurchase(shopId, purchaseId);
     });
 }
@@ -90,6 +92,7 @@ export function updatePurchase(shopId, purchaseId, data, actorUserId) {
 
     if (result.changes === 0) throw new Error('Purchase not found');
     logAction(shopId, 'purchase', purchaseId, 'UPDATE', null, actorUserId);
+    bustHomeCache(shopId);
     return getPurchase(shopId, purchaseId);
 }
 
@@ -107,4 +110,5 @@ export function deletePurchase(shopId, purchaseId, actorUserId) {
 
     if (result.changes === 0) throw new Error('Purchase not found');
     logAction(shopId, 'purchase', purchaseId, 'DELETE', null, actorUserId);
+    bustHomeCache(shopId);
 }

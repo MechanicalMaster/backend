@@ -22,6 +22,8 @@ import purchaseRoutes from './routes/purchases.js';
 import attendanceRoutes from './routes/attendance.js';
 import authRoutes from './routes/auth.js';
 import setupRoutes from './routes/setup.js';
+import homeRoutes from './routes/home.js';
+import opsRoutes from './routes/ops.js';
 
 // Initialize Express app
 const app = express();
@@ -75,6 +77,8 @@ app.use(cors());
     app.use('/api/purchases', purchaseRoutes);
     app.use('/api/attendance', attendanceRoutes);
     app.use('/api/setup', setupRoutes);
+    app.use('/api/home', homeRoutes);
+    app.use('/api/ops', opsRoutes);
 
     // 404 handler (must come after all routes including AdminJS)
     app.use(notFoundHandler);

@@ -6,6 +6,7 @@ import { generateInvoiceNumber } from './sequenceService.js';
 import { calculateInvoiceTotals } from '../utils/calculator.js';
 import { assembleInvoiceAggregate, decomposeInvoiceAggregate } from '../models/InvoiceAggregate.js';
 import { logAction } from './auditService.js';
+import { bustHomeCache } from '../routes/home.js';
 
 /**
  * Assemble a complete invoice aggregate from database
@@ -116,6 +117,7 @@ export function createInvoice(shopId, aggregatePayload, requestId = null, actorU
     }
 
     logAction(shopId, 'invoice', invoiceId, 'CREATE', { invoiceNumber }, actorUserId);
+    bustHomeCache(shopId);
 
     return assembleInvoice(shopId, invoiceId);
   });
@@ -179,6 +181,7 @@ export function updateInvoice(shopId, invoiceId, aggregatePayload, actorUserId) 
       computedTotals.roundOff, computedTotals.grandTotal);
 
     logAction(shopId, 'invoice', invoiceId, 'UPDATE', null, actorUserId);
+    bustHomeCache(shopId);
 
     return assembleInvoice(shopId, invoiceId);
   });
@@ -214,6 +217,7 @@ export function deleteInvoice(shopId, invoiceId, actorUserId) {
   }
 
   logAction(shopId, 'invoice', invoiceId, 'DELETE', null, actorUserId);
+  bustHomeCache(shopId);
 }
 
 /**

@@ -437,6 +437,77 @@ Serve image file directly. Use photo ID from invoice/product responses.
 
 ---
 
+## Home Snapshot
+
+The home snapshot endpoint provides aggregated metrics for the home screen. All business logic is backend-owned.
+
+### GET `/api/home/snapshot` *(Auth Required)*
+
+Returns complete home screen data as a single deterministic snapshot.
+
+**Response:**
+```json
+{
+  "snapshotVersion": 1,
+  "businessPulse": {
+    "amountReceivedThisWeek": 50000,
+    "percentChangeWoW": 25.5,
+    "paymentsCompleted": 3
+  },
+  "primaryAction": {
+    "mostUsed": "INVOICE"
+  },
+  "recentActivity": [
+    {
+      "type": "INVOICE",
+      "title": "Overdue: INV-001",
+      "subtitle": "Customer Name",
+      "amount": 10000,
+      "status": "OVERDUE",
+      "date": "2025-12-15",
+      "entityId": "invoice-uuid"
+    }
+  ],
+  "riskSummary": {
+    "unpaidInvoicesCount": 5,
+    "unpaidAmount": 125000
+  },
+  "momentum": {
+    "invoiceStreakDays": 7,
+    "totalSentThisWeek": 12
+  },
+  "generatedAt": "2026-01-03T13:52:00.000Z"
+}
+```
+
+**Field Descriptions:**
+
+- `snapshotVersion`: Schema version (currently 1)
+- `businessPulse`: Weekly payment metrics with WoW comparison
+- `primaryAction.mostUsed`: `"INVOICE"` | `"PURCHASE"` | `"EXPENSE"` (based on last 30 days)
+- `recentActivity`: Curated cards (max 3):
+  - First: Oldest overdue invoice (if any)
+  - Second: Last paid invoice (if any)
+  - Third: Risk summary OR recent creation
+- `riskSummary`: Aggregated unpaid/partial invoices
+- `momentum.invoiceStreakDays`: Consecutive days with ≥1 invoice
+- `generatedAt`: ISO timestamp of snapshot generation
+
+**Caching:**
+
+- Snapshots are cached server-side for 5 minutes
+- Cache is automatically invalidated on invoice/payment/purchase mutations
+- Subsequent calls within 5 minutes return cached data
+
+**UI Guidelines:**
+
+- Call once on home screen mount
+- Render sections conditionally (check for empty arrays/zero counts)
+- **NEVER** compute totals, percentages, or filters in UI
+- All business logic is backend-owned
+
+---
+
 ## Error Responses
 
 ```json

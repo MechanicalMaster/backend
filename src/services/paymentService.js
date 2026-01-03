@@ -6,6 +6,7 @@ import { generatePaymentNumber } from './sequenceService.js';
 import { updateCustomerBalance } from './customerService.js';
 import { updateVendorBalance } from './vendorService.js';
 import { logAction } from './auditService.js';
+import { bustHomeCache } from '../routes/home.js';
 
 /**
  * Create a payment with allocations (TRANSACTIONAL)
@@ -51,6 +52,7 @@ export function createPayment(shopId, data, actorUserId) {
         }
 
         logAction(shopId, 'payment', paymentId, 'CREATE', { transactionNumber }, actorUserId);
+        bustHomeCache(shopId);
 
         return getPayment(shopId, paymentId);
     });
@@ -164,5 +166,6 @@ export function deletePayment(shopId, paymentId, actorUserId) {
         }
 
         logAction(shopId, 'payment', paymentId, 'DELETE', null, actorUserId);
+        bustHomeCache(shopId);
     });
 }

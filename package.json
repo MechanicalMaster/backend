@@ -36,7 +36,8 @@
     "rotating-file-stream": "^3.2.7",
     "sanitize-html": "^2.11.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "unzipper": "^0.12.3"
   },
   "devDependencies": {
     "jest": "^29.7.0",

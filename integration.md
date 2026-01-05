@@ -717,6 +717,101 @@ const createBackup = async () => {
 3. Automatically trigger download on successful backup creation
 4. Consider debouncing backup button clicks
 
+---
+
+### POST `/api/ops/restore` *(ADMIN Only)*
+
+Restore database and file storage from a previously downloaded backup ZIP file.
+
+> ⚠️ **CRITICAL:** This is a **destructive operation**. All current data will be replaced with backup contents. The server will **shut down** after successful restore and must be restarted manually.
+
+**Security:**
+- Requires authentication with **ADMIN role**
+- Prevents concurrent restores (409 Conflict)
+- Cannot run while backup is in progress
+- Strict ZIP validation (path traversal prevention)
+- Creates emergency backup before restore
+
+**Request:**
+```http
+POST /api/ops/restore
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+backup: <ZIP file>
+```
+
+**Limits:**
+- Max file size: **100MB**
+- Allowed types: `.zip` only
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "restartRequired": true,
+  "photosRestored": 42,
+  "emergencyBackupPath": "emergency_pre_restore_2026-01-05T15-30-00-000Z.db",
+  "restoredAt": "2026-01-05T15:30:00.000Z"
+}
+```
+
+> **Note:** After this response, the server will exit. Restart required.
+
+**Response (400 Bad Request):**
+```json
+{ "error": "Invalid backup: swipe.db not found at root", "requestId": "uuid" }
+```
+
+**Response (403 Forbidden):**
+```json
+{ "error": "Admin access required for restore operations", "requestId": "uuid" }
+```
+
+**Response (409 Conflict):**
+```json
+{ "error": "Restore already in progress", "requestId": "uuid" }
+```
+
+**Response (415 Unsupported Media Type):**
+```json
+{ "error": "Only ZIP files are allowed", "requestId": "uuid" }
+```
+
+**Frontend Integration Example:**
+```javascript
+const restoreFromBackup = async (file) => {
+  const formData = new FormData();
+  formData.append('backup', file);
+  
+  const response = await fetch('/api/ops/restore', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData
+  });
+  
+  if (response.status === 403) {
+    alert('Admin access required');
+    return;
+  }
+  
+  if (!response.ok) {
+    const { error } = await response.json();
+    throw new Error(error);
+  }
+  
+  const result = await response.json();
+  alert(`Restore complete! ${result.photosRestored} photos restored. Server will restart.`);
+  // Connection will be lost - handle reconnection logic
+};
+```
+
+**Best Practices:**
+1. Show prominent warning before restore (data loss)
+2. Require confirmation dialog
+3. Handle connection loss after successful restore
+4. Implement automatic reconnection with retry logic
+
 
 ---
 

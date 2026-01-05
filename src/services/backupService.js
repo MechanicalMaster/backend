@@ -1,14 +1,17 @@
 /**
  * Backup Service
  * Creates SQLite database backups using better-sqlite3's backup method
+ * Supports restore from backup with strict validation
  */
 
-import { getDatabase } from '../db/init.js';
-import { existsSync, mkdirSync, readdirSync, statSync, createWriteStream } from 'fs';
+import { getDatabase, closeDatabase } from '../db/init.js';
+import { existsSync, mkdirSync, readdirSync, statSync, createWriteStream, createReadStream, rmSync, copyFileSync, readFileSync } from 'fs';
+import { mkdir, rm, readdir, copyFile } from 'fs/promises';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { createChildLogger } from '../utils/logger.js';
 import archiver from 'archiver';
+import unzipper from 'unzipper';
 import { config } from '../config/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -87,9 +90,10 @@ export function listBackups() {
 }
 
 /**
- * In-memory mutex flag to prevent concurrent backups
+ * In-memory mutex flags to prevent concurrent operations
  */
 let isBackupRunning = false;
+let isRestoreRunning = false;
 
 /**
  * Validate backup filename to prevent path traversal attacks
@@ -231,3 +235,265 @@ export async function createFullBackup() {
         isBackupRunning = false;
     }
 }
+
+/**
+ * SQLite file signature (first 16 bytes)
+ */
+const SQLITE_HEADER = Buffer.from('SQLite format 3\0');
+
+/**
+ * Validate that a file is a valid SQLite database
+ * @param {string} filePath - Path to the database file
+ * @returns {boolean} True if valid SQLite file
+ */
+function validateSQLiteFile(filePath) {
+    try {
+        const header = readFileSync(filePath, { encoding: null }).slice(0, 16);
+        return header.equals(SQLITE_HEADER);
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Validate a ZIP entry path for security
+ * @param {string} entryPath - Path from ZIP entry
+ * @returns {boolean} True if path is safe
+ */
+function isPathSafe(entryPath) {
+    // Reject absolute paths
+    if (entryPath.startsWith('/') || entryPath.startsWith('\\')) {
+        return false;
+    }
+    // Reject path traversal
+    if (entryPath.includes('..')) {
+        return false;
+    }
+    // Reject backslash (Windows path separator could be sneaky)
+    if (entryPath.includes('\\')) {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Restore from a backup ZIP file
+ * WARNING: This will replace all current data and terminate the process
+ * 
+ * @param {string} zipPath - Path to the uploaded ZIP file
+ * @param {Object} auditContext - Context for audit logging { shopId, userId }
+ * @returns {Promise<Object>} Restore metadata
+ */
+export async function restoreFromBackup(zipPath, auditContext) {
+    // Check mutex - prevent concurrent restores
+    if (isRestoreRunning) {
+        const error = new Error('Restore already in progress');
+        error.statusCode = 409;
+        throw error;
+    }
+
+    // Also prevent restore while backup is running
+    if (isBackupRunning) {
+        const error = new Error('Cannot restore while backup is in progress');
+        error.statusCode = 409;
+        throw error;
+    }
+
+    ensureBackupDir();
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const tempDir = join(BACKUP_DIR, `restore_temp_${timestamp}`);
+
+    try {
+        isRestoreRunning = true;
+
+        backupLogger.info({ zipPath }, 'Starting restore from backup');
+
+        // Step 1: Create temp extraction directory
+        await mkdir(tempDir, { recursive: true });
+        backupLogger.info({ tempDir }, 'Created temp extraction directory');
+
+        // Step 2: Extract and validate ZIP contents
+        let hasSwipeDb = false;
+        let hasStorageDir = false;
+        const extractedPhotos = [];
+
+        await new Promise((resolve, reject) => {
+            createReadStream(zipPath)
+                .pipe(unzipper.Parse())
+                .on('entry', async (entry) => {
+                    const entryPath = entry.path;
+                    const type = entry.type; // 'Directory' or 'File'
+
+                    // Security: Validate path
+                    if (!isPathSafe(entryPath)) {
+                        backupLogger.error({ entryPath }, 'Unsafe path in ZIP, aborting');
+                        entry.autodrain();
+                        reject(new Error(`Unsafe path in backup: ${entryPath}`));
+                        return;
+                    }
+
+                    // Check for swipe.db at root
+                    if (entryPath === 'swipe.db' && type === 'File') {
+                        hasSwipeDb = true;
+                        const destPath = join(tempDir, 'swipe.db');
+                        entry.pipe(createWriteStream(destPath));
+                        backupLogger.info('Found swipe.db in backup');
+                    }
+                    // Check for storage/photos/ directory
+                    else if (entryPath.startsWith('storage/photos/') && type === 'File') {
+                        hasStorageDir = true;
+                        // Extract relative to storage/photos/
+                        const relativePath = entryPath.replace('storage/photos/', '');
+                        if (relativePath && !relativePath.includes('/')) {
+                            // Only extract files directly in photos dir (not nested subdirs)
+                            const photosDir = join(tempDir, 'photos');
+                            if (!existsSync(photosDir)) {
+                                mkdirSync(photosDir, { recursive: true });
+                            }
+                            const destPath = join(photosDir, relativePath);
+                            entry.pipe(createWriteStream(destPath));
+                            extractedPhotos.push(relativePath);
+                        } else if (relativePath.includes('/')) {
+                            // Handle nested paths like storage/photos/uploads/file.jpg
+                            const photosDir = join(tempDir, 'photos');
+                            const fullPath = join(photosDir, relativePath);
+                            const dir = dirname(fullPath);
+                            if (!existsSync(dir)) {
+                                mkdirSync(dir, { recursive: true });
+                            }
+                            entry.pipe(createWriteStream(fullPath));
+                            extractedPhotos.push(relativePath);
+                        } else {
+                            entry.autodrain();
+                        }
+                    }
+                    else {
+                        entry.autodrain();
+                    }
+                })
+                .on('close', resolve)
+                .on('error', reject);
+        });
+
+        // Step 3: Validate extracted contents
+        if (!hasSwipeDb) {
+            const error = new Error('Invalid backup: swipe.db not found at root');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const extractedDbPath = join(tempDir, 'swipe.db');
+        if (!validateSQLiteFile(extractedDbPath)) {
+            const error = new Error('Invalid backup: swipe.db is not a valid SQLite database');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        backupLogger.info({
+            hasSwipeDb,
+            hasStorageDir,
+            extractedPhotos: extractedPhotos.length
+        }, 'Backup validation passed');
+
+        // Step 4: Create emergency backup of current state
+        const emergencyBackupPath = join(BACKUP_DIR, `emergency_pre_restore_${timestamp}.db`);
+        const currentDbPath = config.databasePath;
+
+        backupLogger.info({ emergencyBackupPath }, 'Creating emergency backup before restore');
+
+        // Close current database connection
+        closeDatabase();
+
+        // Copy current DB to emergency backup
+        copyFileSync(currentDbPath, emergencyBackupPath);
+        backupLogger.info({ emergencyBackupPath }, 'Emergency backup created');
+
+        // Step 5: Replace swipe.db
+        backupLogger.info('Replacing database file');
+        copyFileSync(extractedDbPath, currentDbPath);
+        backupLogger.info('Database replaced');
+
+        // Step 6: Replace storage/photos/ if present in backup
+        const currentPhotosPath = config.storagePath;
+        const extractedPhotosPath = join(tempDir, 'photos');
+
+        if (existsSync(extractedPhotosPath)) {
+            backupLogger.info({ currentPhotosPath }, 'Replacing photos directory');
+
+            // Remove current photos
+            if (existsSync(currentPhotosPath)) {
+                rmSync(currentPhotosPath, { recursive: true, force: true });
+            }
+
+            // Copy extracted photos
+            await copyDirRecursive(extractedPhotosPath, currentPhotosPath);
+            backupLogger.info({ photosRestored: extractedPhotos.length }, 'Photos restored');
+        }
+
+        // Step 7: Clean up temp directory
+        await rm(tempDir, { recursive: true, force: true });
+        backupLogger.info({ tempDir }, 'Cleaned up temp directory');
+
+        // Step 8: Log audit event (to file since DB is being replaced)
+        backupLogger.info({
+            action: 'SYSTEM_RESTORE',
+            shopId: auditContext?.shopId,
+            userId: auditContext?.userId,
+            photosRestored: extractedPhotos.length,
+            emergencyBackupPath
+        }, 'SYSTEM_RESTORE completed');
+
+        const metadata = {
+            success: true,
+            restartRequired: true,
+            photosRestored: extractedPhotos.length,
+            emergencyBackupPath: basename(emergencyBackupPath),
+            restoredAt: new Date().toISOString()
+        };
+
+        backupLogger.info(metadata, 'Restore completed successfully. Server will exit.');
+
+        // Return metadata before exit (response will be sent by route handler)
+        // The route handler will call process.exit(0) after sending response
+        return metadata;
+
+    } catch (error) {
+        backupLogger.error({ err: error }, 'Restore failed');
+
+        // Clean up temp directory on error
+        if (existsSync(tempDir)) {
+            try {
+                await rm(tempDir, { recursive: true, force: true });
+            } catch (cleanupErr) {
+                backupLogger.error({ cleanupErr }, 'Failed to clean up temp directory');
+            }
+        }
+
+        throw error;
+    } finally {
+        isRestoreRunning = false;
+    }
+}
+
+/**
+ * Recursively copy a directory
+ * @param {string} src - Source directory
+ * @param {string} dest - Destination directory
+ */
+async function copyDirRecursive(src, dest) {
+    await mkdir(dest, { recursive: true });
+    const entries = await readdir(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const srcPath = join(src, entry.name);
+        const destPath = join(dest, entry.name);
+
+        if (entry.isDirectory()) {
+            await copyDirRecursive(srcPath, destPath);
+        } else {
+            await copyFile(srcPath, destPath);
+        }
+    }
+}
+

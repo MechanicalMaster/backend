@@ -501,8 +501,76 @@ Same request/response schema as Customers.
 
 ## Photos
 
-### GET `/api/photos/:id`
+### GET `/api/photos/:id` *(Auth Required)*
+
 Serve image file directly. Use photo ID from invoice/product responses.
+
+**Security:**
+- Requires authentication (`Authorization: Bearer <token>`)
+- Shop-scoped: Only returns photos belonging to your shop
+- Returns 401 if no token, 404 if photo not found or belongs to another shop
+
+**Response:**
+- `200 OK`: Binary image data with appropriate `Content-Type` header
+- `401 Unauthorized`: Missing or invalid token
+- `404 Not Found`: Photo doesn't exist or belongs to another shop
+
+> ⚠️ **IMPORTANT:** Browser `<img src="...">` tags do NOT send `Authorization` headers automatically. You must load images programmatically with the auth header.
+
+**Frontend Integration (JavaScript/Web):**
+```javascript
+// Load authenticated image and convert to displayable URL
+async function loadAuthenticatedImage(photoId) {
+  const response = await fetch(`/api/photos/${photoId}`, {
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to load image: ${response.status}`);
+  }
+  
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
+// Usage
+const imageUrl = await loadAuthenticatedImage('photo-uuid');
+document.getElementById('my-image').src = imageUrl;
+
+// Remember to revoke when done to prevent memory leaks
+URL.revokeObjectURL(imageUrl);
+```
+
+**Frontend Integration (Swift/iOS):**
+```swift
+func loadAuthenticatedImage(photoId: String, token: String) async throws -> UIImage {
+    var request = URLRequest(url: URL(string: "\(baseURL)/api/photos/\(photoId)")!)
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    
+    let (data, response) = try await URLSession.shared.data(for: request)
+    
+    guard let httpResponse = response as? HTTPURLResponse,
+          httpResponse.statusCode == 200,
+          let image = UIImage(data: data) else {
+        throw ImageError.loadFailed
+    }
+    
+    return image
+}
+```
+
+**React Native / Expo:**
+```javascript
+// Use Image component with headers prop
+<Image
+  source={{
+    uri: `/api/photos/${photoId}`,
+    headers: { Authorization: `Bearer ${token}` }
+  }}
+/>
+```
 
 ---
 

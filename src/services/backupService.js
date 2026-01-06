@@ -19,6 +19,7 @@ const __dirname = dirname(__filename);
 
 const backupLogger = createChildLogger('backup');
 const BACKUP_DIR = join(__dirname, '../../storage/backups');
+const BACKUP_RETENTION_COUNT = 2; // Keep only the last N backups
 
 /**
  * Ensure backup directory exists
@@ -27,6 +28,38 @@ function ensureBackupDir() {
     if (!existsSync(BACKUP_DIR)) {
         mkdirSync(BACKUP_DIR, { recursive: true });
         backupLogger.info({ path: BACKUP_DIR }, 'Created backup directory');
+    }
+}
+
+/**
+ * Clean up old backup files, keeping only the most recent N backups
+ * Only cleans up ZIP backups (swipe_backup_*.zip), not DB backups or emergency backups
+ */
+function cleanupOldBackups() {
+    try {
+        const files = readdirSync(BACKUP_DIR)
+            .filter(f => f.startsWith('swipe_backup_') && f.endsWith('.zip'))
+            .map(filename => {
+                const filePath = join(BACKUP_DIR, filename);
+                const stats = statSync(filePath);
+                return { filename, filePath, mtime: stats.mtime };
+            })
+            .sort((a, b) => b.mtime - a.mtime); // Newest first
+
+        if (files.length > BACKUP_RETENTION_COUNT) {
+            const toDelete = files.slice(BACKUP_RETENTION_COUNT);
+            for (const file of toDelete) {
+                rmSync(file.filePath, { force: true });
+                backupLogger.info({ deleted: file.filename }, 'Deleted old backup (retention policy)');
+            }
+            backupLogger.info({
+                kept: BACKUP_RETENTION_COUNT,
+                deleted: toDelete.length
+            }, 'Backup cleanup completed');
+        }
+    } catch (error) {
+        // Don't fail the backup if cleanup fails
+        backupLogger.warn({ err: error }, 'Backup cleanup failed (non-fatal)');
     }
 }
 
@@ -225,6 +258,10 @@ export async function createFullBackup() {
         };
 
         backupLogger.info(metadata, 'Full backup completed successfully');
+
+        // Clean up old backups (retention policy)
+        cleanupOldBackups();
+
         return metadata;
 
     } catch (error) {

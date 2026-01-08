@@ -4,9 +4,7 @@ import {
     getCategory,
     listCategories,
     updateCategory,
-    deleteCategory,
-    createSubcategory,
-    deleteSubcategory
+    deleteCategory
 } from '../services/categoryService.js';
 import { authenticateToken, adminOnly } from '../middleware/auth.js';
 import { injectShopScope } from '../middleware/shopScope.js';
@@ -21,7 +19,7 @@ router.use(injectShopScope);
  * @swagger
  * /api/categories:
  *   get:
- *     summary: List all categories with subcategories
+ *     summary: List all categories
  *     tags: [Categories]
  */
 router.get('/', (req, res, next) => {
@@ -94,38 +92,6 @@ router.put('/:id', (req, res, next) => {
 router.delete('/:id', adminOnly, (req, res, next) => {
     try {
         deleteCategory(req.shopId, req.params.id, req.user.userId);
-        res.status(204).send();
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * @swagger
- * /api/categories/{id}/subcategories:
- *   post:
- *     summary: Add subcategory to category
- *     tags: [Categories]
- */
-router.post('/:id/subcategories', (req, res, next) => {
-    try {
-        const subcategory = createSubcategory(req.shopId, req.params.id, req.body, req.user.userId);
-        res.status(201).json(subcategory);
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * @swagger
- * /api/categories/{categoryId}/subcategories/{subcategoryId}:
- *   delete:
- *     summary: Delete subcategory (ADMIN only)
- *     tags: [Categories]
- */
-router.delete('/:categoryId/subcategories/:subcategoryId', adminOnly, (req, res, next) => {
-    try {
-        deleteSubcategory(req.shopId, req.params.subcategoryId, req.user.userId);
         res.status(204).send();
     } catch (error) {
         next(error);

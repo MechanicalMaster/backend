@@ -47,6 +47,8 @@ export function assembleInvoiceAggregate(invoice, customer, items, totals, photo
             id: item.id,
             productId: item.product_id,
             description: item.description,
+            hsn: item.hsn,
+            purity: item.purity,
             quantity: item.quantity,
             rate: item.rate,
             taxRate: item.tax_rate,
@@ -104,6 +106,8 @@ export function decomposeInvoiceAggregate(aggregate, computedValues) {
         items: aggregate.items.map(item => ({
             product_id: item.productId || null,
             description: item.description || null,
+            hsn: item.hsn || null,
+            purity: item.purity || null,
             quantity: item.quantity,
             rate: item.rate,
             tax_rate: item.taxRate || null,

@@ -104,13 +104,13 @@ export function createInvoice(shopId, aggregatePayload, requestId = null, actorU
       decomposed.customerSnapshot.gstin, sanitizedCustomerAddress);
 
     const itemStmt = db.prepare(`
-      INSERT INTO invoice_items (id, invoice_id, product_id, description, quantity, rate, tax_rate, weight_json, amount_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO invoice_items (id, invoice_id, product_id, description, hsn, purity, quantity, rate, tax_rate, weight_json, amount_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     sanitizedItems.forEach(item => {
       itemStmt.run(generateUUID(), invoiceId, item.product_id, item.description,
-        item.quantity, item.rate, item.tax_rate, item.weight_json, item.amount_json);
+        item.hsn, item.purity, item.quantity, item.rate, item.tax_rate, item.weight_json, item.amount_json);
     });
 
     db.prepare(`
@@ -195,12 +195,12 @@ export function updateInvoice(shopId, invoiceId, aggregatePayload, actorUserId) 
 
     db.prepare('DELETE FROM invoice_items WHERE invoice_id = ?').run(invoiceId);
     const itemStmt = db.prepare(`
-      INSERT INTO invoice_items (id, invoice_id, product_id, description, quantity, rate, tax_rate, weight_json, amount_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO invoice_items (id, invoice_id, product_id, description, hsn, purity, quantity, rate, tax_rate, weight_json, amount_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     sanitizedItems.forEach(item => {
       itemStmt.run(generateUUID(), invoiceId, item.product_id, item.description,
-        item.quantity, item.rate, item.tax_rate, item.weight_json, item.amount_json);
+        item.hsn, item.purity, item.quantity, item.rate, item.tax_rate, item.weight_json, item.amount_json);
     });
 
     db.prepare('DELETE FROM invoice_totals WHERE invoice_id = ?').run(invoiceId);

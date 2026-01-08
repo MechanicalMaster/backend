@@ -144,7 +144,7 @@ Verify OTP and get JWT token. **Dev OTP: `111111`**
 ```
 
 ### GET `/api/auth/me` *(Auth Required)*
-Get current user info with shop details.
+Get current user info with shop details (including business header info).
 ```json
 // Response
 {
@@ -154,7 +154,12 @@ Get current user info with shop details.
   "role": "ADMIN",
   "shop": {
     "id": "shop-uuid",
-    "name": "My Shop"
+    "name": "My Shop",
+    "address": { "line1": "...", "city": "...", "state": "...", "stateCode": "27", "pincode": "..." },
+    "phone": "022-12345678",
+    "gstin": "27AABCU9603R1ZM",
+    "termsConditions": "Goods once sold will not be returned...",
+    "jurisdictionCity": "Mumbai"
   }
 }
 ```
@@ -264,6 +269,8 @@ Create invoice. Supports `X-Request-Id` header for idempotency.
   "items": [{
     "productId": "uuid (optional)",
     "description": "Gold Ring 22k",
+    "hsn": "7113",
+    "purity": "22K",
     "quantity": 1,
     "rate": 65000,
     "taxRate": 3,
@@ -358,12 +365,27 @@ Upload photo (multipart/form-data, field: `photo`).
   "type": "product",
   "name": "Diamond Earring",
   "sku": "DE-001",
+  "hsn": "7113",
+  "categoryId": "uuid",
   "sellingPrice": 120000,
-  "taxRate": 3,
-  "metal": { "purity": "18k", "type": "Rose Gold" },
-  "gemstone": { "type": "Diamond", "carat": 0.5 }
+  "purchasePrice": 95000,
+  "unit": "pcs",
+  "grossWeight": 5.5,
+  "netWeight": 5.0,
+  "purity": "18K",
+  "metal": { "type": "Rose Gold", "color": "Rose" },
+  "gemstone": { "type": "Diamond", "carat": 0.5 },
+  "design": { "style": "Traditional" },
+  "vendorRef": "V-123",
+  "hallmarkCert": "HM-456",
+  "showOnline": false,
+  "notForSale": false
 }
 ```
+
+> [!NOTE]
+> **Removed fields:** `subcategoryId` and `taxRate` have been removed from the product schema.
+> **Added fields:** `grossWeight`, `netWeight`, `purity` for jewellery-specific data.
 
 ### ⚠️ Image Handling (Important)
 
@@ -440,13 +462,14 @@ Images are linked via `product_id` foreign key and returned automatically when f
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/categories` | List all with subcategories |
+| GET | `/api/categories` | List all |
 | GET | `/api/categories/:id` | Get one |
 | POST | `/api/categories` | Create: `{ "name": "Gold Jewelry", "type": "product" }` |
 | PUT | `/api/categories/:id` | Update |
-| DELETE | `/api/categories/:id` | Delete (cascades subcategories) |
-| POST | `/api/categories/:id/subcategories` | Add: `{ "name": "Rings" }` |
-| DELETE | `/api/categories/:categoryId/subcategories/:subcategoryId` | Delete |
+| DELETE | `/api/categories/:id` | Delete (ADMIN only) |
+
+> [!NOTE]
+> Subcategories have been removed from the schema. Use categories only.
 
 ---
 

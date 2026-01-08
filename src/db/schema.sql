@@ -7,11 +7,16 @@
 -- PRAGMA synchronous = NORMAL;
 -- PRAGMA foreign_keys = ON;
 
--- 1. Shops (Tenants)
+-- 1. Shops (Tenants) with Business Header Info
 CREATE TABLE IF NOT EXISTS shops (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  address_json TEXT,
+  phone TEXT,
+  gstin TEXT,
+  terms_conditions TEXT,
+  jurisdiction_city TEXT
 );
 
 -- 2. Users (belong to exactly one shop)
@@ -67,13 +72,7 @@ CREATE TABLE IF NOT EXISTS categories (
   FOREIGN KEY (shop_id) REFERENCES shops(id)
 );
 
--- 6. Subcategories
-CREATE TABLE IF NOT EXISTS subcategories (
-  id TEXT PRIMARY KEY,
-  category_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  FOREIGN KEY (category_id) REFERENCES categories(id)
-);
+-- 6. Subcategories (REMOVED - no longer used)
 
 -- 7. Products (shop-scoped)
 CREATE TABLE IF NOT EXISTS products (
@@ -85,12 +84,15 @@ CREATE TABLE IF NOT EXISTS products (
   barcode TEXT,
   hsn TEXT,
   category_id TEXT,
-  subcategory_id TEXT,
   description TEXT,
   selling_price REAL,
   purchase_price REAL,
-  tax_rate REAL,
   unit TEXT,
+
+  -- Jewellery-specific fields
+  gross_weight REAL,
+  net_weight REAL,
+  purity TEXT,
 
   metal_json TEXT,
   gemstone_json TEXT,
@@ -109,8 +111,7 @@ CREATE TABLE IF NOT EXISTS products (
   deleted_at TEXT,
 
   FOREIGN KEY (shop_id) REFERENCES shops(id),
-  FOREIGN KEY (category_id) REFERENCES categories(id),
-  FOREIGN KEY (subcategory_id) REFERENCES subcategories(id)
+  FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
 -- 8. Product Images
@@ -160,6 +161,8 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   invoice_id TEXT NOT NULL,
   product_id TEXT,
   description TEXT,
+  hsn TEXT,
+  purity TEXT,
   quantity REAL NOT NULL,
   rate REAL NOT NULL,
   tax_rate REAL,

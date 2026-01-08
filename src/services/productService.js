@@ -24,12 +24,13 @@ export function createProduct(shopId, data, actorUserId) {
 
         db.prepare(`
       INSERT INTO products (
-        id, shop_id, type, name, sku, barcode, hsn, category_id, subcategory_id,
-        description, selling_price, purchase_price, tax_rate, unit,
+        id, shop_id, type, name, sku, barcode, hsn, category_id,
+        description, selling_price, purchase_price, unit,
+        gross_weight, net_weight, purity,
         metal_json, gemstone_json, design_json, vendor_ref, procurement_date,
         hallmark_cert, launch_date, show_online, not_for_sale,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
             productId,
             shopId,
@@ -39,12 +40,13 @@ export function createProduct(shopId, data, actorUserId) {
             data.barcode || null,
             data.hsn || null,
             data.categoryId || null,
-            data.subcategoryId || null,
             sanitizedDescription || null,
             data.sellingPrice || null,
             data.purchasePrice || null,
-            data.taxRate || null,
             data.unit || null,
+            data.grossWeight || null,
+            data.netWeight || null,
+            data.purity || null,
             data.metal ? JSON.stringify(data.metal) : null,
             data.gemstone ? JSON.stringify(data.gemstone) : null,
             data.design ? JSON.stringify(data.design) : null,
@@ -175,8 +177,9 @@ export function updateProduct(shopId, productId, data, actorUserId) {
     const result = db.prepare(`
     UPDATE products
     SET type = ?, name = ?, sku = ?, barcode = ?, hsn = ?, category_id = ?, 
-        subcategory_id = ?, description = ?, selling_price = ?, purchase_price = ?,
-        tax_rate = ?, unit = ?, metal_json = ?, gemstone_json = ?, design_json = ?,
+        description = ?, selling_price = ?, purchase_price = ?,
+        unit = ?, gross_weight = ?, net_weight = ?, purity = ?,
+        metal_json = ?, gemstone_json = ?, design_json = ?,
         vendor_ref = ?, procurement_date = ?, hallmark_cert = ?, launch_date = ?,
         show_online = ?, not_for_sale = ?, updated_at = ?
     WHERE id = ? AND shop_id = ? AND deleted_at IS NULL
@@ -187,12 +190,13 @@ export function updateProduct(shopId, productId, data, actorUserId) {
         data.barcode || null,
         data.hsn || null,
         data.categoryId || null,
-        data.subcategoryId || null,
         sanitizedDescription || null,
         data.sellingPrice || null,
         data.purchasePrice || null,
-        data.taxRate || null,
         data.unit || null,
+        data.grossWeight || null,
+        data.netWeight || null,
+        data.purity || null,
         data.metal ? JSON.stringify(data.metal) : null,
         data.gemstone ? JSON.stringify(data.gemstone) : null,
         data.design ? JSON.stringify(data.design) : null,
